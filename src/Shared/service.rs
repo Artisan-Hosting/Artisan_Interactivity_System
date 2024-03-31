@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use std::fmt;
 use systemctl::{self, Unit};
 
+/// Enum representing different services.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Services {
     PhpProcessor,
@@ -13,6 +14,7 @@ pub enum Services {
     LOCKER,
 }
 
+/// Enum representing the status of a service.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Status {
     Running,
@@ -20,18 +22,21 @@ pub enum Status {
     Error,
 }
 
+/// Enum representing memory information.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Memory {
     MemoryConsumed(String),
 }
 
+/// Enum representing subprocesses information.
 #[derive(Debug, Clone, PartialEq)]
 pub enum SubProcesses {
     Pid(u64),
     Tasks(u64),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+/// Struct representing information about a process.
+#[derive(Debug, Clone)]
 pub struct ProcessInfo {
     pub service: String,
     pub refered: Services,
@@ -41,15 +46,16 @@ pub struct ProcessInfo {
     pub timestamp: String,
 }
 
+/// Enum representing different types of processes.
 #[derive(Debug, Clone)]
 pub enum Processes {
     Services(Vec<ProcessInfo>),
 }
 
 impl Processes {
+    /// Creates a new Processes instance containing information about various services.
     pub fn new() -> Result<Self, UnifiedError> {
         let mut data: Vec<ProcessInfo> = Vec::new();
-        // let webserver: ProcessInfo = ;
         data.push(ProcessInfo::get_info(Services::WEBSERVER)?);
         data.push(ProcessInfo::get_info(Services::PhpProcessor)?);
         data.push(ProcessInfo::get_info(Services::FIREWALL)?);
@@ -60,10 +66,12 @@ impl Processes {
         Ok(Self::Services(data))
     }
 
+    /// Updates the information of a specific service.
     pub fn update(service: Services) -> Result<ProcessInfo, UnifiedError> {
         ProcessInfo::get_info(service)
     }
 
+    /// Iterates over the Processes enum and returns a vector of ProcessInfo.
     pub fn itr(&self) -> Vec<ProcessInfo> {
         match self {
             Processes::Services(data) => data.clone(),
@@ -72,6 +80,7 @@ impl Processes {
 }
 
 impl Services {
+    /// Retrieves information about the service.
     pub fn get_info(&self) -> Result<ProcessInfo, UnifiedError> {
         let unit_name: String = format!("{}", self.clone());
         let unit: Unit = match systemctl::Unit::from_systemctl(&unit_name) {
@@ -112,7 +121,7 @@ impl Services {
         })
     }
 
-    /// This function restarts the requested service. It returns a bool based on the running status after the restart
+    /// Restarts the service and returns a bool based on the running status after the restart.
     pub fn restart(&self) -> Result<bool, UnifiedError> {
         let unit_name: String = format!("{}", self.clone());
         return match systemctl::restart(&unit_name) {
@@ -126,6 +135,7 @@ impl Services {
 }
 
 impl ProcessInfo {
+    /// Retrieves information about a specific service.
     pub fn get_info(service: Services) -> Result<Self, UnifiedError> {
         let unit_name: String = format!("{}", &service);
         let unit: Unit = match systemctl::Unit::from_systemctl(&unit_name) {
@@ -211,9 +221,48 @@ impl fmt::Display for SubProcesses {
     }
 }
 
-// Helper function
-
+/// Generates a timestamp string in the format: YYYY-MM-DD HH:MM:SS.
 pub fn timestamp() -> String {
     let now: DateTime<Utc> = Utc::now();
     now.format("%Y-%m-%d %H:%M:%S").to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_services_display() {
+        assert_eq!(format!("{}", Services::PhpProcessor), "php7.4-fpm.service");
+        assert_eq!(format!("{}", Services::WEBSERVER), "apache2.service");
+        assert_eq!(format!("{}", Services::SSHSERVER), "sshd.service");
+        assert_eq!(format!("{}", Services::MONITOR), "netdata.service");
+        assert_eq!(format!("{}", Services::FIREWALL), "ufw.service");
+        assert_eq!(format!("{}", Services::LOCKER), "dusad.service");
+    }
+
+    #[test]
+    fn test_status_display() {
+        assert_eq!(format!("{}", Status::Running), "active");
+        assert_eq!(format!("{}", Status::Stopped), "stopped");
+        assert_eq!(format!("{}", Status::Error), "Error occurred while checking");
+    }
+
+    #[test]
+    fn test_memory_display() {
+        assert_eq!(format!("{}", Memory::MemoryConsumed("2GB".to_string())), "2GB");
+    }
+
+    #[test]
+    fn test_subprocesses_display() {
+        assert_eq!(format!("{}", SubProcesses::Pid(123)), "123");
+        assert_eq!(format!("{}", SubProcesses::Tasks(456)), "456");
+    }
+
+    #[test]
+    fn test_timestamp() {
+        let timestamp = timestamp();
+        assert!(timestamp.len() > 0);
+    }
+
 }

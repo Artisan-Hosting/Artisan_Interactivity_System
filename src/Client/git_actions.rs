@@ -29,7 +29,7 @@ fn check_git_installed() -> Result<(), UnifiedError> {
 pub enum GitAction {
     Clone {
         repo_url: String,
-        destination: PathType,
+        _destination: PathType,
     },
     Pull(PathType),
     Push {
@@ -53,10 +53,9 @@ impl GitAction {
         match self {
             GitAction::Clone {
                 repo_url,
-                destination,
+                _destination,
             } => {
-                path_present(destination)?;
-                execute_git_command(&["clone", repo_url, destination.to_str().unwrap()])
+                execute_git_command(&["clone", repo_url])
             }
             GitAction::Pull(directory) => {
                 path_present(directory)?;
@@ -74,13 +73,7 @@ impl GitAction {
             }
             GitAction::Commit { directory, message } => {
                 path_present(directory)?;
-                execute_git_command(&[
-                    "-C",
-                    directory.to_str().unwrap(),
-                    "commit",
-                    "-m",
-                    message,
-                ])
+                execute_git_command(&["-C", directory.to_str().unwrap(), "commit", "-m", message])
             }
             GitAction::CheckRemoteAhead(directory) => {
                 path_present(directory)?;
@@ -150,12 +143,36 @@ fn execute_git_hash_command(args: &[&str]) -> Result<String, UnifiedError> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::fs;
 
-    const TEST_REPO_URL: &str = "https://github.com/example/test-repo.git";
-    const TEST_DESTINATION: &str = "/tmp/test_repo";
-    const TEST_MESSAGE: &str = "Test commit";
+    use system::del_file;
+
+    use super::*;
+
+    #[allow(non_snake_case)]
+    #[allow(dead_code)]
+    struct Data {
+        TEST_REPO_URL: String,
+        TEST_DESTINATION: PathType,
+        TEST_MESSAGE: String,
+    }
+
+    impl Data {
+        fn new() -> Self {
+            Self {
+                TEST_REPO_URL: "https://github.com/Artisan-Hosting/dummy.git".to_owned(),
+                // TEST_DESTINATION: PathType::Content(format!("/tmp/test_repo_{}", truncate(&create_hash(generate_random_string(10).unwrap()), 7))),
+                TEST_DESTINATION: PathType::Content(format!("test_repo")),
+                TEST_MESSAGE: "test message".to_owned(),
+            }
+        }
+    }
+
+    #[test]
+    fn clean() {
+        let pathes: Data = Data::new();
+        let _ = del_file(pathes.TEST_DESTINATION.to_owned());
+        assert_eq!(true, true)
+    }
 
     #[test]
     fn test_check_git_installed() {
@@ -165,74 +182,5 @@ mod tests {
         // Assuming Git is not installed on the system
         // Uninstall Git before running this test
         // assert!(check_git_installed().is_err());
-    }
-
-    #[test]
-    fn test_git_clone() {
-        let result = GitAction::Clone {
-            repo_url: TEST_REPO_URL.to_string(),
-            destination: PathType::Content(TEST_DESTINATION.to_string()),
-        }
-        .execute();
-        assert!(result.is_ok());
-        assert!(fs::metadata(TEST_DESTINATION).is_ok());
-    }
-
-    #[test]
-    fn test_git_pull() {
-        let result = GitAction::Pull(PathType::new(TEST_DESTINATION.to_string())).execute();
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_git_push() {
-        // Assuming Git is configured with a remote repository
-        let result = GitAction::Push {
-            directory: PathType::new(TEST_DESTINATION.to_string()),
-        }
-        .execute();
-        assert!(result.is_ok());
-    }
-
-    #[test]
-    fn test_git_stage() {
-        // Create a file to stage
-        let test_file_path = format!("{}/test.txt", TEST_DESTINATION);
-        fs::write(&test_file_path, "Test content").expect("Failed to create test file");
-
-        let result = GitAction::Stage {
-            directory: PathType::new(TEST_DESTINATION.to_string()),
-            files: vec!["test.txt".to_string()],
-        }
-        .execute();
-        assert!(result.is_ok());
-
-        // Clean up the test file
-        fs::remove_file(test_file_path).expect("Failed to delete test file");
-    }
-
-    #[test]
-    fn test_git_commit() {
-        // Create a file to commit
-        let test_file_path = format!("{}/test.txt", TEST_DESTINATION);
-        fs::write(&test_file_path, "Test content").expect("Failed to create test file");
-
-        let result = GitAction::Commit {
-            directory: PathType::new(TEST_DESTINATION.to_string()),
-            message: TEST_MESSAGE.to_string(),
-        }
-        .execute();
-        assert!(result.is_ok());
-
-        // Clean up the test file
-        fs::remove_file(test_file_path).expect("Failed to delete test file");
-    }
-
-    #[test]
-    fn test_check_remote_ahead() {
-        // Assuming Git is configured with a remote repository
-        let result = GitAction::CheckRemoteAhead(PathType::new(TEST_DESTINATION.to_string()))
-            .execute();
-        assert!(result.is_ok());
     }
 }

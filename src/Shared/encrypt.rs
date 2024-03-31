@@ -1,7 +1,4 @@
-// THIS IS POTENTIALLY A BIG BOTTLENECK
-
 use nix::unistd::{chown, Gid, Uid};
-use service::{ProcessInfo, Processes, Status};
 use std::{
     io::{Read, Write},
     os::unix::net::UnixStream,
@@ -16,10 +13,11 @@ use system::{
 use users::{Groups, Users, UsersCache};
 
 use crate::{
-    errors::{AisError, UnifiedError},
-    service,
+    errors::{AisError, Caller, ErrorInfo, UnifiedError},
+    service::{ProcessInfo, Processes, Status},
 };
 
+/// Represents a Dusa instance used for encryption and decryption operations.
 #[derive(Debug, Clone)]
 pub struct Dusa {
     pub initialized: bool,
@@ -29,32 +27,29 @@ pub struct Dusa {
     pub process_status: Status,
 }
 
+/// Represents commands that can be executed by Dusa.
 pub enum Commands {
-    EncryptFile(PathBuf, String, String), // path  owner name
-    DecryptFile(String, String),          //Owner name
-    DecryptText(String),                  // Cipher data
-    EncryptText(String),                  // plain jane
-    RemoveFile(String, String),           // owner name
+    EncryptFile(PathBuf, String, String), // path, owner, name
+    DecryptFile(String, String),          // owner, name
+    DecryptText(String),                  // cipher data
+    EncryptText(String),                  // plain text data
+    RemoveFile(String, String),           // owner, name
 }
 
 impl Dusa {
+    /// Initializes a new Dusa instance.
     pub fn initialize(process_info: Arc<RwLock<Processes>>) -> Result<Self, UnifiedError> {
         let system_process_info = process_info
             .read()
             .map_err(|e| UnifiedError::from_ais_error(AisError::new(&e.to_string())))?;
         let dusa_process_info = system_process_info.itr();
-        let dusa_data: &ProcessInfo = match dusa_process_info.get(5) {
-            Some(d) => d,
-            None => {
-                return Err(UnifiedError::from_ais_error(AisError::new(
-                    "Dusad system status unknown",
-                )))
-            }
-        };
-        let service_name: String = dusa_data.service.clone();
-        let socket_path: PathType = PathType::Str("/var/run/dusa/dusa.sock".into());
+        let dusa_data: &ProcessInfo = dusa_process_info
+            .get(5)
+            .ok_or_else(|| AisError::new("Dusad system status unknown"))?;
+        let service_name = dusa_data.service.clone();
+        let socket_path = PathType::Str("/var/run/dusa/dusa.sock".into());
         let debugging = true;
-        let process_status: Status = dusa_data.status.clone();
+        let process_status = dusa_data.status.clone();
 
         match &process_status {
             Status::Error => {
@@ -86,15 +81,19 @@ impl Dusa {
 }
 
 impl Commands {
+    /// Executes the specified command.
     pub fn execute(&self) -> Result<Option<String>, UnifiedError> {
         match self {
             Commands::EncryptFile(path, owner, name) => {
                 let retro_fit_path = PathType::PathBuf(path.to_path_buf());
                 if !path_present(&retro_fit_path.clone_path())? {
-                    return Err(SystemError::new(
-                        system::errors::SystemErrorType::ErrorOpeningFile,
-                    )
-                    .into());
+                    return Err(UnifiedError::SystemError(
+                        ErrorInfo::new(Caller::Function(
+                            true,
+                            Some("Commands::Encryptfie".to_owned()),
+                        )),
+                        SystemError::new(SystemErrorType::ErrorOpeningFile),
+                    ));
                 }
                 let (uid, gid) = Self::get_id();
                 Self::set_file_ownership(path, uid, gid);
@@ -127,7 +126,6 @@ impl Commands {
                 command_data.push(data.to_owned());
 
                 let message: String = Self::create_message(command_data);
-                // notice(&message);
 
                 let response = Self::send_message(message)?;
                 Ok(Some(response))
@@ -185,5 +183,30 @@ impl Commands {
 
     fn set_file_ownership(path: &PathBuf, uid: Uid, gid: Gid) {
         chown(path, Some(uid), Some(gid)).expect("Failed to set file ownership");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_decrypt_text() {
+        let cipher_data = "32633164313236363935376336656132393864343666363462376666383439303d3330333132643532333132653330326533313264333133383333363236323331363433393631333533383331333233363338333433383332333736333264333163623931383838333365313435633063336562303463336665363433363432653253467849774839394f3638475a7344376464396564373939633533343364656632626235643430636366643362366261353034346462353632386330393935663539363836643564613932323437363d31";
+
+        let command = Commands::DecryptText(cipher_data.to_string());
+        let result = command.execute().unwrap();
+
+        assert!(result.is_some());
+    }
+
+    #[test]
+    fn test_encrypt_text() {
+        let plain_text = "hello";
+
+        let command = Commands::EncryptText(plain_text.to_string());
+        let result = command.execute().unwrap();
+
+        assert!(result.is_some());
     }
 }

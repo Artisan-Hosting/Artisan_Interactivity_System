@@ -1,7 +1,7 @@
-use std::{fmt, io::Write, net::TcpStream};
-use serde::{Deserialize, Serialize};
-use crate::errors::{AisError, UnifiedError};
 use crate::encrypt::Commands;
+use crate::errors::{AisError, UnifiedError};
+use serde::{Deserialize, Serialize};
+use std::{fmt, io::Write, net::TcpStream};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Email {
@@ -40,27 +40,35 @@ impl Email {
 impl EmailSecure {
     pub fn new(email: Email) -> Result<Self, UnifiedError> {
         if !email.is_valid() {
-            return Err(UnifiedError::AisError(AisError::new("Invalid email data")));
+            return Err(UnifiedError::from_ais_error(AisError::new(
+                "Invalid Email Data",
+            )));
         }
 
         let plain_email_data = format!("{}-=-{}", email.subject, email.body);
         let encrypted_data = match Commands::execute(&Commands::EncryptText(plain_email_data)) {
             Ok(Some(d)) => d,
-            Ok(None) => return Err(UnifiedError::AisError(AisError::new("No data provided for encryption"))),
+            Ok(None) => {
+                return Err(UnifiedError::from_ais_error(AisError::new(
+                    "No data was provided to encrypt",
+                )))
+            }
             Err(e) => return Err(e.into()),
         };
 
-        Ok(EmailSecure { data: encrypted_data })
+        Ok(EmailSecure {
+            data: encrypted_data,
+        })
     }
 
     pub fn send(&self) -> Result<(), UnifiedError> {
-        let mut stream = match TcpStream::connect("10.1.0.11:1827"){
+        let mut stream = match TcpStream::connect("10.1.0.11:1827") {
             Ok(d) => d,
-            Err(e) => return Err(UnifiedError::AisError(AisError::new(&e.to_string()))),
+            Err(e) => return Err(UnifiedError::from_ais_error(AisError::new(&e.to_string()))),
         };
         match stream.write_all(self.data.as_bytes()) {
             Ok(_) => Ok(()),
-            Err(e) => Err(UnifiedError::AisError(AisError::new(&e.to_string()))),
+            Err(e) => Err(UnifiedError::from_ais_error(AisError::new(&e.to_string()))),
         }
     }
 }

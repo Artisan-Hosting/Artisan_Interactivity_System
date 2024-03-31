@@ -40,19 +40,19 @@ fn send_email(subject: String, body: String) -> Result<(), UnifiedError> {
         .to("DarrionWhitfield <dwhitfield@artisanhosting.net>"
             .parse()
             .map_err(|e| {
-                UnifiedError::AisError(AisError::new(&format!("Failed to build email: {}", e)))
+                UnifiedError::from_ais_error(AisError::new(&format!("Failed to build email: {}", e)))
             })?)
         .from(
             "ArtisanBot <ais_bot@artisanhosting.net>"
                 .parse()
                 .map_err(|e| {
-                    UnifiedError::AisError(AisError::new(&format!("Failed to build email: {}", e)))
+                    UnifiedError::from_ais_error(AisError::new(&format!("Failed to build email: {}", e)))
                 })?,
         )
         .subject(subject)
         .body(body)
         .map_err(|e| {
-            UnifiedError::AisError(AisError::new(&format!("Failed to build email: {}", e)))
+            UnifiedError::from_ais_error(AisError::new(&format!("Failed to build email: {}", e)))
         })?;
 
     // The smpt credentials
@@ -63,7 +63,7 @@ fn send_email(subject: String, body: String) -> Result<(), UnifiedError> {
 
     let mailer = SmtpTransport::relay("mail.ramfield.net")
         .map_err(|e| {
-            UnifiedError::AisError(AisError::new(&format!(
+            UnifiedError::from_ais_error(AisError::new(&format!(
                 "Failed to connect to the mail server: {}",
                 e
             )))
@@ -74,7 +74,7 @@ fn send_email(subject: String, body: String) -> Result<(), UnifiedError> {
     // Send the email
     mailer
         .send(&email)
-        .map_err(|e| UnifiedError::AisError(AisError::new(&e.to_string())))?;
+        .map_err(|e| UnifiedError::from_ais_error(AisError::new(&e.to_string())))?;
 
     Ok(())
 }
@@ -160,7 +160,7 @@ fn handle_client(
 ) -> Result<(), UnifiedError> {
     let mut buffer = [0; 2048];
     let bytes_read = stream.read(&mut buffer).map_err(|e| {
-        UnifiedError::AisError(AisError::new(&format!("Failed to read buffered: {}", e)))
+        UnifiedError::from_ais_error(AisError::new(&format!("Failed to read buffered: {}", e)))
     })?;
     let received_data = String::from_utf8_lossy(&buffer[..bytes_read]);
     notice("Emails recived");
@@ -170,7 +170,7 @@ fn handle_client(
 
     let email_data_plain = unsafe {
         String::from_utf8_unchecked(hex::decode(decrypted_data).map_err(|e| {
-            UnifiedError::AisError(AisError::new(&format!(
+            UnifiedError::from_ais_error(AisError::new(&format!(
                 "An error occoured while reading the hexed data: {}",
                 &e.to_string()
             )))
@@ -195,10 +195,10 @@ fn handle_client(
 
     // Send response to client
     stream.write_all(b"Email received").map_err(|e| {
-        UnifiedError::AisError(AisError::new(&format!("Error sending response: {}", e)))
+        UnifiedError::from_ais_error(AisError::new(&format!("Error sending response: {}", e)))
     })?;
     stream.flush().map_err(|e| {
-        UnifiedError::AisError(AisError::new(&format!(
+        UnifiedError::from_ais_error(AisError::new(&format!(
             "Error while flushing buffer: {}",
             e
         )))

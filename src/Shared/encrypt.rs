@@ -1,6 +1,5 @@
 // THIS IS POTENTIALLY A BIG BOTTLENECK
 
-use errors::{AisError, UnifiedError};
 use nix::unistd::{chown, Gid, Uid};
 use service::{ProcessInfo, Processes, Status};
 use std::{
@@ -12,19 +11,21 @@ use std::{
 use system::{
     create_hash,
     errors::{SystemError, SystemErrorType},
-    path_present, truncate,
+    path_present, truncate, ClonePath, PathType,
 };
 use users::{Groups, Users, UsersCache};
 
-use crate::{errors, service};
-
+use crate::{
+    errors::{AisError, UnifiedError},
+    service,
+};
 
 #[derive(Debug, Clone)]
 pub struct Dusa {
     pub initialized: bool,
     pub service_name: String,
     pub debugging: bool,
-    pub socket_path: PathBuf,
+    pub socket_path: PathType,
     pub process_status: Status,
 }
 
@@ -40,23 +41,23 @@ impl Dusa {
     pub fn initialize(process_info: Arc<RwLock<Processes>>) -> Result<Self, UnifiedError> {
         let system_process_info = process_info
             .read()
-            .map_err(|e| UnifiedError::AisError(AisError::new(&e.to_string())))?;
+            .map_err(|e| UnifiedError::from_ais_error(AisError::new(&e.to_string())))?;
         let dusa_process_info = system_process_info.itr();
         let dusa_data: &ProcessInfo = match dusa_process_info.get(5) {
             Some(d) => d,
             None => {
-                return Err(UnifiedError::AisError(AisError::new(
+                return Err(UnifiedError::from_ais_error(AisError::new(
                     "Dusad system status unknown",
                 )))
             }
         };
         let service_name: String = dusa_data.service.clone();
-        let socket_path: PathBuf = PathBuf::from("/var/run/dusa/dusa.sock");
+        let socket_path: PathType = PathType::Str("/var/run/dusa/dusa.sock".into());
         let debugging = true;
         let process_status: Status = dusa_data.status.clone();
 
         match &process_status {
-            Status::Stopped | Status::Error => {
+            Status::Error => {
                 return Err(AisError::EncryptionNotReady(Some(format!(
                     "Service: {} is not running or is in an unknown state",
                     &service_name
@@ -66,7 +67,7 @@ impl Dusa {
             _ => (),
         };
 
-        if !path_present(socket_path.clone())? {
+        if !path_present(&socket_path.clone_path())? {
             return Err(AisError::EncryptionNotReady(Some(format!(
                 "Socket path {} is missing",
                 &socket_path.display()
@@ -88,7 +89,8 @@ impl Commands {
     pub fn execute(&self) -> Result<Option<String>, UnifiedError> {
         match self {
             Commands::EncryptFile(path, owner, name) => {
-                if !path_present(path.to_path_buf())? {
+                let retro_fit_path = PathType::PathBuf(path.to_path_buf());
+                if !path_present(&retro_fit_path.clone_path())? {
                     return Err(SystemError::new(
                         system::errors::SystemErrorType::ErrorOpeningFile,
                     )

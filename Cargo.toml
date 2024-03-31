@@ -1,30 +1,76 @@
 [package]
-name = "client"
-version = "0.1.0"
+name = "Artisan_Interactivity_System"
+version = "1.0.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+
+# text output 
+#bat = "0.24.0"
+
+# Colored outputs 
+colored = "2.0"
+
+# Date and time manipulation
 chrono = "0.4"
+
+# Filesystem operations
 fs_extra = "1"
+
+# Git operations
 git2 = "0.13.10"
+
+# Get hostname 
+gethostname = "0.4.3"
+
+# Hexadecimal encoding and decoding
 hex = "0.4.3"
+
+# Hostname services
+hostname = {version = "^0.3", features = ["set"]}
+
+# Get network interface addresses
 if-addrs = "0.9.0"
+
+# HTTP client library
 isahc = "1.7.2"
+
+# SMTP client library
 lettre = "0.11.0"
+
+# Get Linux Standard Base release information
+lsb_release = "0.1.0"
+
+# Logging framework
 logging = { git = "https://github.com/Dj-Codeman/logger.git" }
+
+# Get MAC address
 mac_address = "1.1.5"
+
+# UNIX-specific functionality
 nix = "0.20"
+
+# Pretty-printing of data structures
 pretty = { git = "https://github.com/Dj-Codeman/pretty.git" }
+
+# Process information and system statistics
 recs = { git = "https://github.com/Dj-Codeman/recs.git" }
-systemstat = {git = "https://github.com/valpackett/systemstat.git" }
-system_shutdown = "4.0.1"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
+systemstat = { git = "https://github.com/valpackett/systemstat.git" }
 sysinfo = "0.22.0"
 system = { git = "https://github.com/Dj-Codeman/system.git" }
+system_shutdown = "4.0.1"
+
+# Serialization/deserialization library
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# System control
 systemctl = "0.3.1"
+
+# custom errors
+thiserror = "1.0.29"
+
+# User management
 users = "0.9.0"
 
 [lib]
@@ -41,7 +87,7 @@ path = "src/Mail/main.rs"
 
 [[bin]]
 name = "ssh_monitor"
-path = "src/Ssh_Logger/main.rs"
+path = "src/SshLogger/main.rs"
 
 [[bin]]
 name = "generate_credentials"
@@ -54,3 +100,7 @@ path = "src/Tools/manifest/main.rs"
 [[bin]]
 name = "ais_welcome"
 path = "src/Welcome/main.rs"
+
+[[bin]]
+name = "ais_first_run"
+path = "src/FirstRun/main.rs"

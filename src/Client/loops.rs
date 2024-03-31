@@ -1,10 +1,11 @@
-use pretty::{notice, output, warn};
+use pretty::{output, warn};
 use shared::emails::{Email, EmailSecure};
 use shared::errors::{AisError, UnifiedError};
 use shared::service::{Memory, ProcessInfo, Processes, Status};
 use shared::{ais_data::AisInfo, git_data::GitAuth};
 use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 use sysinfo::{ProcessExt, System, SystemExt};
+use system::ClonePath;
 use system_shutdown::reboot;
 
 use crate::{
@@ -21,27 +22,27 @@ pub fn website_update_loop(
     let mut site_data: std::sync::RwLockWriteGuard<'_, SiteInfo> = match system_data.try_write() {
         Ok(d) => d,
         Err(e) => {
-            return Err(UnifiedError::AisError(AisError::ThreadedDataError(Some(
-                format!("website update {}", e.to_string()),
-            ))))
+            return Err(UnifiedError::from_ais_error(AisError::ThreadedDataError(
+                Some(format!("website update {}", e.to_string())),
+            )))
         }
     };
 
     let ais_info: std::sync::RwLockReadGuard<'_, AisInfo> = match ais_data.try_read() {
         Ok(d) => d,
         Err(e) => {
-            return Err(UnifiedError::AisError(AisError::ThreadedDataError(Some(
-                format!("website update {}", e.to_string()),
-            ))))
+            return Err(UnifiedError::from_ais_error(AisError::ThreadedDataError(
+                Some(format!("website update {}", e.to_string())),
+            )))
         }
     };
 
     let git_info: std::sync::RwLockReadGuard<'_, GitAuth> = match git_creds.try_read() {
         Ok(d) => d,
         Err(e) => {
-            return Err(UnifiedError::AisError(AisError::ThreadedDataError(Some(
-                format!("website update {}", e.to_string()),
-            ))))
+            return Err(UnifiedError::from_ais_error(AisError::ThreadedDataError(
+                Some(format!("website update {}", e.to_string())),
+            )))
         }
     };
 
@@ -55,16 +56,11 @@ pub fn website_update_loop(
         }
         Updates::OutOfDate => {
             let site_update_action: GitAction =
-                GitAction::Pull(site_data.application_folder.to_path_buf());
-            let result: Result<(bool, Vec<shared::errors::UnifiedWarning>), UnifiedError> = site_update_action.execute();
+                GitAction::Pull(site_data.application_folder.clone_path());
+            let result: Result<bool, UnifiedError> = site_update_action.execute();
             match result {
                 Ok(ok) => {
-                    if ok.1.len() > 0 {
-                        for warning in ok.1 {
-                            warn(&format!("{:?}", warning));
-                        }
-                    }
-                    match ok.0 {
+                    match ok {
                         true => {
                             site_data.application_status = new_site_data.application_status;
 
@@ -98,13 +94,13 @@ pub fn website_update_loop(
 }
 
 pub fn machine_update_loop(ais_data: Arc<RwLock<AisInfo>>) -> Result<(), UnifiedError> {
-    let ais_new_data: AisInfo = AisInfo::new();
+    let ais_new_data: AisInfo = AisInfo::new()?;
     let mut ais_write_safe_data: RwLockWriteGuard<'_, AisInfo> = match ais_data.write() {
         Ok(d) => d,
         Err(e) => {
-            return Err(UnifiedError::AisError(AisError::ThreadedDataError(Some(
-                format!("machine update {}", e.to_string()),
-            ))))
+            return Err(UnifiedError::from_ais_error(AisError::ThreadedDataError(
+                Some(format!("machine update {}", e.to_string())),
+            )))
         }
     };
 
@@ -149,18 +145,18 @@ pub fn service_update_loop(
     let service_data: RwLockReadGuard<'_, Processes> = match system_service_data.try_read() {
         Ok(d) => d,
         Err(e) => {
-            return Err(UnifiedError::AisError(AisError::ThreadedDataError(Some(
-                format!("service update {}", e.to_string()),
-            ))))
+            return Err(UnifiedError::from_ais_error(AisError::ThreadedDataError(
+                Some(format!("service update {}", e.to_string())),
+            )))
         }
     };
 
     let ais_info: std::sync::RwLockReadGuard<'_, AisInfo> = match ais_data.try_read() {
         Ok(d) => d,
         Err(e) => {
-            return Err(UnifiedError::AisError(AisError::ThreadedDataError(Some(
-                format!("service update {}", e.to_string()),
-            ))))
+            return Err(UnifiedError::from_ais_error(AisError::ThreadedDataError(
+                Some(format!("service update {}", e.to_string())),
+            )))
         }
     };
 
@@ -187,6 +183,7 @@ pub fn service_update_loop(
                     };
                     let phone_home: EmailSecure = EmailSecure::new(email)?;
                     phone_home.send()?;
+                    warn(&format!("Service {} has stopped. Emails has been sent", service_info.service));
                     // Send an email that a service is stopped and
                 }
                 Status::Error => {
@@ -201,8 +198,6 @@ pub fn service_update_loop(
                         body: format!("The service {} stopped unexpectedly, attempting the restart automatically.", service_info.service),
                     };
                     let phone_home: EmailSecure = EmailSecure::new(email)?;
-                    phone_home.send()?;
-                    //* Restarting a program and only sending the womp womp email if the restart fails */
                     match service_info.refered.restart()? {
                         true => {
                             warn(&format!(
@@ -211,7 +206,10 @@ pub fn service_update_loop(
                             ));
                             drop(phone_home);
                         }
-                        false => phone_home.send()?,
+                        false => {
+                            warn(&format!("Service {} has entered and erroneous state. Emails has been sent", service_info.service));
+                            phone_home.send()?
+                        }
                     }
                 }
                 Status::Running => {
@@ -222,6 +220,7 @@ pub fn service_update_loop(
                         };
                     let phone_home: EmailSecure = EmailSecure::new(mail)?;
                     phone_home.send()?;
+                    output("GREEN", "Service started !");
                 }
             }
         }
@@ -239,21 +238,20 @@ pub fn service_update_loop(
                 }
             }
         }
-
-        notice(&format!("Updating {}", new_service_info.service));
         data.push(new_service_to_update);
     }
 
     drop(service_data);
 
-    let mut service_data_old: RwLockWriteGuard<'_, Processes> = match system_service_data.try_write() {
-        Ok(d) => d,
-        Err(e) => {
-            return Err(UnifiedError::AisError(AisError::ThreadedDataError(Some(
-                format!("service update {}", e.to_string()),
-            ))))
-        }
-    };
+    let mut service_data_old: RwLockWriteGuard<'_, Processes> =
+        match system_service_data.try_write() {
+            Ok(d) => d,
+            Err(e) => {
+                return Err(UnifiedError::from_ais_error(AisError::ThreadedDataError(
+                    Some(format!("service update {}", e.to_string())),
+                )))
+            }
+        };
 
     drop(ais_info);
 

@@ -1,12 +1,11 @@
-use std::{fs::File, io::Read};
-
-use system::is_path;
-use systemstat::{Platform, System};
+use lsb_release::LsbRelease;
+use pretty::output;
 use shared::ais_data;
+use systemstat::{Platform, System};
 
 fn main() {
-    let sys = System::new();
-    let ais_info = ais_data::AisInfo::new();
+    let sys: System = System::new();
+    let ais_info: ais_data::AisInfo = ais_data::AisInfo::new().unwrap();
 
     let system_mem: String = match sys.memory() {
         Ok(mem) => {
@@ -17,35 +16,39 @@ fn main() {
         Err(x) => format!("\nMemory: error: {}", x),
     };
 
-    let ais_version = "3.0";
-    let ais_identyfi: String = fetch_machine_id();
-    let system_info = sys_info::linux_os_release().unwrap();
-    let system_version = system_info.pretty_name.unwrap_or_default();
-    let system_hostname = hostname::get().unwrap_or_default();
-    let (system_load_1, system_load_5, system_load_15) = match sys.load_average() {
-        Ok(l) => {
-            (l.one, l.five, l.fifteen)
-        },
-
-        Err(_) => { 
-            let val: f32 = 0.0;
-            (val, val, val)
-        },
+    let lsb_failsafe: LsbRelease = LsbRelease {
+        id: String::from("failsafe"),
+        desc: String::from("System in a damanged state"),
+        version: String::from("0.00"),
+        code_name: String::from("Wacky Whitfield"),
     };
 
+    let ais_version = ais_info.system_version;
+    let ais_identyfi: String = ais_info
+        .machine_id
+        .unwrap_or(String::from("error parsing manifest"));
+    let system_version = lsb_release::info().unwrap_or(lsb_failsafe);
+    let system_hostname = gethostname::gethostname();
+    let (system_load_1, system_load_5, system_load_15) = match sys.load_average() {
+        Ok(l) => (l.one, l.five, l.fifteen),
 
-let welcome_text = format!(
+        Err(_) => {
+            let val: f32 = 0.0;
+            (val, val, val)
+        }
+    };
+
+    let welcome_text = format!(
         r#"
-                  _    _                         _    _
-     /\          | |  (_)                       | |  (_)
-    /  \    _ __ | |_  _  ___   __ _  _ __      | |__| |  ___   ___ | |_  _  _ __    __ _
+                  _    _                         _    _                   _
+     /\          | |  (_)                       | |  | |                 (_) 
+    /  \    _ __ | |_  _  ___   __ _  _ __      | |__| |  ___   ___ | |_     _ __    __ _
    / /\ \  | '__|| __|| |/ __| / _` || '_ \     | '__' | / _ \ /`__|| __|| || '_ \  / _` |
   / ____ \ | |   | |_ | |\__ \| (_| || | | |    | |  | || (_) |\__ \| |_ | || | | || (_| |
  /_/    \_\|_|    \__||_||___/ \__,_||_| |_|    |_|  |_| \___/ |___/ \__||_||_| |_| \__, |
                                                                                      __/ |
                                                                                     |___/   
-
-
+ 
 Your machine at a glance:
 
 Os Version   : {}
@@ -57,11 +60,20 @@ Mem Usage    : {:.4}%
 
 Welcome!
 
-This server is hosted by Artisan Hosting. If you have any questions or need help,
-please don't hesitate to contact me at dwhitfield@artisanhosting.net or shoot me a text at 414-578-0988.
+This server is hosted by Artisan Hosting. If you're reading this now would probably be a goodtime 
+to contact me at dwhitfield@artisanhosting.net or shoot me a text at 414-578-0988. Thank you for
+supporting me and Artisan Hosting.
+
 "#,
-        system_version, ais_version, ais_identyfi.trim_end(), system_hostname, system_load_1, system_load_5, system_load_15, system_mem
+        format!("{} - {}", system_version.version, system_version.code_name),
+        format!("{}_{}", ais_version.version_number.to_string(), ais_version.version_code),
+        ais_identyfi.trim_end(),
+        system_hostname,
+        system_load_1,
+        system_load_5,
+        system_load_15,
+        system_mem
     );
 
-    println!("{}", welcome_text);
+    output("BLUE", &format!("{}", welcome_text));
 }

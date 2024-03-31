@@ -1,7 +1,7 @@
-use std::fmt;
-use chrono::{DateTime, Utc};
-use systemctl::{self, Unit};
 use crate::errors::{AisError, UnifiedError};
+use chrono::{DateTime, Utc};
+use std::fmt;
+use systemctl::{self, Unit};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Services {
@@ -69,7 +69,6 @@ impl Processes {
             Processes::Services(data) => data.clone(),
         }
     }
-
 }
 
 impl Services {
@@ -78,7 +77,9 @@ impl Services {
         let unit: Unit = match systemctl::Unit::from_systemctl(&unit_name) {
             Ok(d) => d,
             Err(e) => {
-                return Err(UnifiedError::AisError(AisError::SystemError(Some(e.to_string()))));
+                return Err(UnifiedError::from_ais_error(AisError::SystemError(Some(
+                    e.to_string(),
+                ))));
             }
         };
 
@@ -115,12 +116,12 @@ impl Services {
     pub fn restart(&self) -> Result<bool, UnifiedError> {
         let unit_name: String = format!("{}", self.clone());
         return match systemctl::restart(&unit_name) {
-            Ok(_) => match systemctl::is_active(&unit_name){
+            Ok(_) => match systemctl::is_active(&unit_name) {
                 Ok(d) => Ok(d),
-                Err(e) => Err(UnifiedError::AisError(AisError::new(&e.to_string()))),
+                Err(e) => Err(UnifiedError::from_ais_error(AisError::new(&e.to_string()))),
             },
-            Err(e) => Err(UnifiedError::AisError(AisError::new(&e.to_string()))),
-        }
+            Err(e) => Err(UnifiedError::from_ais_error(AisError::new(&e.to_string()))),
+        };
     }
 }
 
@@ -130,7 +131,9 @@ impl ProcessInfo {
         let unit: Unit = match systemctl::Unit::from_systemctl(&unit_name) {
             Ok(d) => d,
             Err(e) => {
-                return Err(UnifiedError::AisError(AisError::SystemError(Some(e.to_string()))));
+                return Err(UnifiedError::from_ais_error(AisError::SystemError(Some(
+                    e.to_string(),
+                ))));
             }
         };
 

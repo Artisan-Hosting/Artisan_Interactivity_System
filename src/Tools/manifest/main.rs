@@ -4,7 +4,7 @@ use system::{create_hash, truncate};
 
 fn main() -> Result<(), UnifiedError> {
     // Create an instance of AisInfo
-    let mut ais_info = AisInfo::new();
+    let mut ais_info: AisInfo = AisInfo::new()?;
 
     ais_info.machine_id = Some(
         truncate(
@@ -23,11 +23,8 @@ fn main() -> Result<(), UnifiedError> {
         )
         .to_owned(),
     );
-    // Specify the file path for the manifest
-    let file_location = "artisan.manifest";
-
     // Generate the manifest file
-    ais_info.create_manifest(file_location)?;
+    ais_info.create_manifest()?;
 
     pass("Manifest file created successfully");
 

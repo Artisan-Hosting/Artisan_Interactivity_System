@@ -1,73 +1,80 @@
 use std::{
-    os::unix::process::ExitStatusExt, path::PathBuf, process::{Command, ExitStatus}
+    os::unix::process::ExitStatusExt,
+    process::{Command, ExitStatus},
 };
-use system::path_present;
-use shared::errors::{AisError, GitError, GitWarning, UnifiedError, UnifiedWarning};
 
-/// Function to check if Git is installed
+use shared::errors::{AisError, GitError, UnifiedError};
+use system::{path_present, PathType};
+
+/// Function to check if Git is installed.
 fn check_git_installed() -> Result<(), UnifiedError> {
     let output: std::process::Output = match Command::new("git").arg("--version").output() {
         Ok(output) => output,
-        Err(io_err) => return Err(UnifiedError::AisError(AisError::new(&io_err.to_string()))),
+        Err(io_err) => {
+            return Err(UnifiedError::from_ais_error(AisError::new(
+                &io_err.to_string(),
+            )))
+        }
     };
 
     if output.status.success() {
         Ok(())
     } else {
-        Err(UnifiedError::GitError(GitError::GitNotInstalled))
+        Err(UnifiedError::from_git_error(GitError::GitNotInstalled))
     }
 }
 
-/// Enum representing Git actions
+/// Enum representing Git actions.
 #[derive(Debug)]
 pub enum GitAction {
     Clone {
         repo_url: String,
-        destination: PathBuf,
+        destination: PathType,
     },
-    Pull(PathBuf),
+    Pull(PathType),
     Push {
-        directory: PathBuf,
+        directory: PathType,
     },
     Stage {
-        directory: PathBuf,
+        directory: PathType,
         files: Vec<String>,
     },
     Commit {
-        directory: PathBuf,
+        directory: PathType,
         message: String,
     },
-    CheckRemoteAhead(PathBuf),
+    CheckRemoteAhead(PathType),
 }
 
 impl GitAction {
-    pub fn execute(&self) -> Result<(bool, Vec<UnifiedWarning>), UnifiedError> {
+    /// Execute the Git action.
+    pub fn execute(&self) -> Result<bool, UnifiedError> {
         check_git_installed()?;
         match self {
             GitAction::Clone {
                 repo_url,
                 destination,
             } => {
-                path_present(destination.to_path_buf())?;
+                path_present(destination)?;
                 execute_git_command(&["clone", repo_url, destination.to_str().unwrap()])
             }
             GitAction::Pull(directory) => {
-                path_present(directory.to_path_buf())?;
-                execute_git_command_with_warnings(&["-C", directory.to_str().unwrap(), "pull"])
+                path_present(directory)?;
+                execute_git_command(&["-C", directory.to_str().unwrap(), "pull"])
             }
             GitAction::Push { directory } => {
-                path_present(directory.to_path_buf())?;
-                execute_git_command_with_warnings(&["-C", directory.to_str().unwrap(), "push"])
+                path_present(directory)?;
+                execute_git_command(&["-C", directory.to_str().unwrap(), "push"])
             }
             GitAction::Stage { directory, files } => {
-                path_present(directory.to_path_buf())?;
+                path_present(directory)?;
                 let mut args = vec!["-C", directory.to_str().unwrap(), "add"];
                 args.extend(files.iter().map(|s| s.as_str()));
-                execute_git_command_with_warnings(&args)
+                execute_git_command(&args)
             }
             GitAction::Commit { directory, message } => {
-                path_present(directory.to_path_buf())?;
-                execute_git_command_with_warnings(&[
+                path_present(directory)?;
+                execute_git_command(&[
                     "-C",
                     directory.to_str().unwrap(),
                     "commit",
@@ -76,77 +83,39 @@ impl GitAction {
                 ])
             }
             GitAction::CheckRemoteAhead(directory) => {
-                path_present(directory.to_path_buf())?;
+                path_present(directory)?;
                 check_remote_ahead(directory)
             }
         }
     }
 }
 
-// Function to execute a Git command and capture warnings
-fn execute_git_command_with_warnings(
-    args: &[&str],
-) -> Result<(bool, Vec<UnifiedWarning>), UnifiedError> {
+/// Execute a Git command.
+fn execute_git_command(args: &[&str]) -> Result<bool, UnifiedError> {
     let output: std::process::Output = match Command::new("git").args(args).output() {
         Ok(output) => output,
-        Err(io_err) => return Err(UnifiedError::AisError(AisError::new(&io_err.to_string()))),
-    };
-
-    let success: bool = output.status.success();
-    let warnings: Vec<UnifiedWarning> = extract_warnings(&output.stderr);
-
-    if success {
-        Ok((true, warnings))
-    } else {
-        Err(UnifiedError::GitError(GitError::CommandFailed(
-            output.status,
-        )))
-    }
-}
-
-// Function to extract warnings from Git output
-fn extract_warnings(stderr: &[u8]) -> Vec<UnifiedWarning> {
-    String::from_utf8_lossy(stderr)
-        .lines()
-        .filter_map(|line| match line {
-            line if line.contains("LF will be replaced by CRLF") => {
-                Some(UnifiedWarning::GitWarning(GitWarning::LineEndingConversion))
-            }
-            line if line.contains("warning: unable to access") => {
-                Some(UnifiedWarning::GitWarning(GitWarning::PermissionDenied))
-            }
-            line if line.contains("warning: file size exceeds") => Some(
-                UnifiedWarning::GitWarning(GitWarning::FileSizeExceedsThreshold),
-            ),
-            // Add more warning checks here as needed
-            _ => None,
-        })
-        .collect()
-}
-
-// Function to execute a Git command
-fn execute_git_command(args: &[&str]) -> Result<(bool, Vec<UnifiedWarning>), UnifiedError> {
-    let output: std::process::Output = match Command::new("git").args(args).output() {
-        Ok(output) => output,
-        Err(io_err) => return Err(UnifiedError::AisError(AisError::new(&io_err.to_string()))),
+        Err(io_err) => {
+            return Err(UnifiedError::from_ais_error(AisError::new(
+                &io_err.to_string(),
+            )))
+        }
     };
 
     if output.status.success() {
-        let warnings: Vec<UnifiedWarning> = extract_warnings(&output.stderr);
-        Ok((true, warnings))
+        Ok(true)
     } else {
-        Err(UnifiedError::GitError(GitError::CommandFailed(
+        Err(UnifiedError::from_git_error(GitError::CommandFailed(
             output.status,
         )))
     }
 }
 
-// Function to check if the remote repository is ahead of the local repository
-fn check_remote_ahead(directory: &PathBuf) -> Result<(bool, Vec<UnifiedWarning>), UnifiedError> {
-    let fetch_output: (bool, Vec<UnifiedWarning>) = execute_git_command(&["-C", directory.to_str().unwrap(), "fetch"])?;
+/// Check if the remote repository is ahead of the local repository.
+fn check_remote_ahead(directory: &PathType) -> Result<bool, UnifiedError> {
+    let fetch_output: bool = execute_git_command(&["-C", directory.to_str().unwrap(), "fetch"])?;
 
-    if !fetch_output.0 {
-        return Err(UnifiedError::GitError(GitError::CommandFailed(
+    if !fetch_output {
+        return Err(UnifiedError::from_git_error(GitError::CommandFailed(
             ExitStatus::from_raw(1),
         )));
     }
@@ -156,21 +125,114 @@ fn check_remote_ahead(directory: &PathBuf) -> Result<(bool, Vec<UnifiedWarning>)
     let remote_hash: String =
         execute_git_hash_command(&["-C", directory.to_str().unwrap(), "rev-parse", "@{u}"])?;
 
-    Ok((remote_hash != local_hash, Vec::new()))
+    Ok(remote_hash != local_hash)
 }
 
-// Function to execute a Git hash command
+/// Execute a Git hash command.
 fn execute_git_hash_command(args: &[&str]) -> Result<String, UnifiedError> {
     let output: std::process::Output = match Command::new("git").args(args).output() {
         Ok(output) => output,
-        Err(io_err) => return Err(UnifiedError::AisError(AisError::new(&io_err.to_string()))),
+        Err(io_err) => {
+            return Err(UnifiedError::from_ais_error(AisError::new(
+                &io_err.to_string(),
+            )))
+        }
     };
 
     if output.status.success() {
         Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
     } else {
-        Err(UnifiedError::GitError(GitError::CommandFailed(
+        Err(UnifiedError::from_git_error(GitError::CommandFailed(
             output.status,
         )))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    const TEST_REPO_URL: &str = "https://github.com/example/test-repo.git";
+    const TEST_DESTINATION: &str = "/tmp/test_repo";
+    const TEST_MESSAGE: &str = "Test commit";
+
+    #[test]
+    fn test_check_git_installed() {
+        // Assuming Git is installed on the system
+        assert!(check_git_installed().is_ok());
+
+        // Assuming Git is not installed on the system
+        // Uninstall Git before running this test
+        // assert!(check_git_installed().is_err());
+    }
+
+    #[test]
+    fn test_git_clone() {
+        let result = GitAction::Clone {
+            repo_url: TEST_REPO_URL.to_string(),
+            destination: PathType::Content(TEST_DESTINATION.to_string()),
+        }
+        .execute();
+        assert!(result.is_ok());
+        assert!(fs::metadata(TEST_DESTINATION).is_ok());
+    }
+
+    #[test]
+    fn test_git_pull() {
+        let result = GitAction::Pull(PathType::new(TEST_DESTINATION.to_string())).execute();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_git_push() {
+        // Assuming Git is configured with a remote repository
+        let result = GitAction::Push {
+            directory: PathType::new(TEST_DESTINATION.to_string()),
+        }
+        .execute();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_git_stage() {
+        // Create a file to stage
+        let test_file_path = format!("{}/test.txt", TEST_DESTINATION);
+        fs::write(&test_file_path, "Test content").expect("Failed to create test file");
+
+        let result = GitAction::Stage {
+            directory: PathType::new(TEST_DESTINATION.to_string()),
+            files: vec!["test.txt".to_string()],
+        }
+        .execute();
+        assert!(result.is_ok());
+
+        // Clean up the test file
+        fs::remove_file(test_file_path).expect("Failed to delete test file");
+    }
+
+    #[test]
+    fn test_git_commit() {
+        // Create a file to commit
+        let test_file_path = format!("{}/test.txt", TEST_DESTINATION);
+        fs::write(&test_file_path, "Test content").expect("Failed to create test file");
+
+        let result = GitAction::Commit {
+            directory: PathType::new(TEST_DESTINATION.to_string()),
+            message: TEST_MESSAGE.to_string(),
+        }
+        .execute();
+        assert!(result.is_ok());
+
+        // Clean up the test file
+        fs::remove_file(test_file_path).expect("Failed to delete test file");
+    }
+
+    #[test]
+    fn test_check_remote_ahead() {
+        // Assuming Git is configured with a remote repository
+        let result = GitAction::CheckRemoteAhead(PathType::new(TEST_DESTINATION.to_string()))
+            .execute();
+        assert!(result.is_ok());
     }
 }

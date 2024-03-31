@@ -124,4 +124,14 @@ impl GitAuth {
             Err(e) => return Err(UnifiedError::from_ais_error(AisError::new(&e.to_string()))),
         }
     }
+
+    pub fn new_mock(user: &str, repo: &str) -> Self {
+        Self {
+            user: user.to_owned(),
+            repo: repo.to_owned(),
+            branch: "".to_owned(),
+            token: "".to_owned(),
+        }
+    }
+
 }

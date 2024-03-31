@@ -10,20 +10,23 @@ use sysinfo::{Process, ProcessExt};
 
 use shared::emails::{Email, EmailSecure};
 
+/// Represents the SSH monitor, which tracks SSH connections.
 #[derive(Debug, Clone)]
 pub enum SshMonitor {
+    /// Tracks seen SSH processes.
     SeenProcesses(Arc<RwLock<HashSet<i32>>>),
 }
 
+/// Represents information about an SSH connection.
 pub struct SshInfo {
     pub time_stamp: String,
     pub system_ip: String,
     pub system_user: String,
     pub priority_status: bool,
-    // pub origin_known: bool, implement ip tracking later
 }
 
 impl SshInfo {
+    /// Prepares an email based on SSH connection information.
     pub fn prepare(&mut self) -> Email {
         let importance = if self.priority_status {
             String::from("HIGH")
@@ -44,16 +47,19 @@ impl SshInfo {
 }
 
 impl SshMonitor {
+    /// Creates a new instance of `SshMonitor`.
     pub fn new() -> Self {
         Self::SeenProcesses(Arc::new(RwLock::new(HashSet::new())))
     }
 
+    /// Retrieves the reference to the set of seen SSH processes.
     pub fn access(self) -> Arc<RwLock<HashSet<i32>>> {
         match self {
             SshMonitor::SeenProcesses(d) => d.clone(),
         }
     }
 
+    /// Processes an SSH connection.
     pub fn process_ssh_connection(
         self,
         process: &Process,
@@ -88,10 +94,6 @@ impl SshMonitor {
                 false => {
                     warn("ssh connections are active");
                     return Ok(());
-                    // return SshMonitor::create_ssh_report(
-                    //     ais_info,
-                    //     username.unwrap_or_else(|| "Already established connection?".to_string()),
-                    // );
                 }
             }
         } else {
@@ -99,6 +101,7 @@ impl SshMonitor {
         }
     }
 
+    /// Creates an SSH report.
     pub fn create_ssh_report(
         ais_info: Arc<RwLock<AisInfo>>,
         username: String,
@@ -138,6 +141,7 @@ impl SshMonitor {
         return secure_email.send();
     }
 
+    /// Validates users from SSH connection data.
     pub fn validate_users(&self, mut data: String) -> (bool, Option<String>) {
         let user_list_critical = vec![
             "dwhitfield".to_string(),
@@ -171,5 +175,50 @@ impl SshMonitor {
                 None
             },
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+   
+    // Test case for preparing an SSH report
+    #[test]
+    fn test_prepare_ssh_report() {
+        let mut ssh_info = SshInfo {
+            time_stamp: "2024-03-25 12:00:00".to_string(),
+            system_ip: "192.168.1.100".to_string(),
+            system_user: "test_user".to_string(),
+            priority_status: true,
+        };
+
+        let email = ssh_info.prepare();
+        assert_eq!(
+            email.subject,
+            "SSH ACCESS AUDIT HIGH IMPORTANCE"
+        );
+        assert_eq!(
+            email.body,
+            "SSH ACCESS NOTIFICATION\nAt 2024-03-25 12:00:00 THE HOST 192.168.1.100 WAS ACCESSED \nBY test_user, FROM AN ORIGIN UNKNOWN."
+        );
+    }
+
+    // Test case for validating SSH users
+    #[test]
+    fn test_validate_ssh_users() {
+        let ssh_monitor = SshMonitor::new();
+
+        let (auth, username) = ssh_monitor.validate_users("root@headhuncho.local".to_string());
+        assert_eq!(auth, true);
+        assert_eq!(username, Some("root".to_string()));
+    }
+
+    // Integration test for creating an SSH report
+    #[test]
+    fn test_create_ssh_report() {
+        let ais_info = Arc::new(RwLock::new(AisInfo::new().unwrap()));
+
+        let result = SshMonitor::create_ssh_report(ais_info, "root".to_string());
+        assert!(result.is_ok());
     }
 }

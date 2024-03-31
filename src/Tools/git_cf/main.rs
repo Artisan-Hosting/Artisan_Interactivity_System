@@ -6,11 +6,7 @@ fn main() -> Result<(), UnifiedError> {
         user: "Dj-Codeman".to_string(),
         repo: "artisan_ws".to_string(),
         branch: "main".to_string(),
-<<<<<<< HEAD
-        token: "***".to_string(),
-=======
         token: "xxxxxxxxxxxxxxxxx".to_string(),
->>>>>>> 255c99b (Functional RC with tests)
     };
 
     // Specify the file path to save the GitAuth data

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["enable_caching","get_search_path","reset_search_path","set_search_path","strict_hash_verification","strict_object_creation"]};

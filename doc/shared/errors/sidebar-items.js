@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["AisError","Caller","GitError","Severity","TimestampType","UnifiedError"],"struct":["ErrorInfo","UnifiedErrorResult"]};

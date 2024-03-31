@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["RecsErrorType","RecsRecivedErrors","RecsRecivedWarnings","RecsWarningType"],"struct":["RecsError","RecsWarning"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["AutoStartStatus","Doc","State","Type"],"fn":["cat","disable","enable","exists","freeze","is_active","isolate","list_disabled_services","list_enabled_services","list_units","list_units_full","reload","reload_or_restart","restart","start","status","stop","unfreeze"],"struct":["Unit","UnitList"]};

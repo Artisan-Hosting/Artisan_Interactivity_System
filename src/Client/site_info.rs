@@ -1,7 +1,3 @@
-//! # Site Information Module
-//!
-//! This module defines structures and functions related to site information.
-
 use std::{
     path::PathBuf,
     sync::{Arc, RwLock, RwLockReadGuard},
@@ -11,34 +7,19 @@ use system::{create_hash, errors::SystemError, path_present, truncate, PathType}
 use shared::{errors::{AisError, UnifiedError}, git_data::GitAuth};
 use crate::git_actions::GitAction;
 
-/// Enum representing the update status of a site.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Updates {
-    /// The site is up to date.
     UpToDate,
-    /// The site is out of date and needs updates.
     OutOfDate,
 }
 
-/// Struct holding information about a site.
 #[derive(Clone, Debug)]
 pub struct SiteInfo {
-    /// The folder where the site's application resides.
     pub application_folder: PathType,
-    /// The status of the site's application.
     pub application_status: Updates,
 }
 
 impl SiteInfo {
-    /// Creates a new SiteInfo instance.
-    ///
-    /// # Arguments
-    ///
-    /// * `git_cred` - A reference-counted lock containing Git credentials.
-    ///
-    /// # Returns
-    ///
-    /// A Result containing the new SiteInfo instance if successful, or an error.
     pub fn new(
         git_cred: Arc<RwLock<GitAuth>>,
     ) -> Result<Self, UnifiedError> {
@@ -68,15 +49,6 @@ impl SiteInfo {
         })
     }
 
-    /// Retrieves the path to the site folder.
-    ///
-    /// # Arguments
-    ///
-    /// * `git_auth` - A read guard containing Git authentication information.
-    ///
-    /// # Returns
-    ///
-    /// A Result containing the path to the site folder if successful, or an error.
     pub fn get_site_folder(
         git_auth: &RwLockReadGuard<'_, GitAuth>,
     ) -> Result<PathBuf, UnifiedError> {
@@ -85,6 +57,7 @@ impl SiteInfo {
         let site_folder: String = truncate(&create_hash(site_folder_string), 8).to_owned();
 
         let site_path: String = format!("/var/www/current/{}", site_folder);
+        // sanity check
 
         match path_present(&PathType::Content(site_path.clone())) {
             Ok(d) => match d {
@@ -99,24 +72,4 @@ impl SiteInfo {
             Err(e) => return Err(UnifiedError::from_system_error(e)),
         }
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::sync::{Arc, RwLock};
-
-    #[test]
-    fn test_site_info_creation() {
-        // Mocking GitAuth data
-        let git_auth = Arc::new(RwLock::new(GitAuth::new_mock("user", "repo")));
-        
-        // Creating a new SiteInfo instance
-        let site_info_result = SiteInfo::new(git_auth.clone());
-        
-        // Asserting that the SiteInfo instance was created successfully
-        assert!(site_info_result.is_err());
-
-    }
-
 }

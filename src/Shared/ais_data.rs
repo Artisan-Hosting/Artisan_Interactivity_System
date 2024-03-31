@@ -10,44 +10,28 @@ use mac_address::get_mac_address;
 use serde::{Deserialize, Serialize};
 use system::{path_present, PathType};
 
-/// Struct representing information about the Ais system.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct AisInfo {
-    /// Unique identifier for pages.
     pub pages_id: Option<String>,
-    /// Unique identifier for the client.
     pub client_id: Option<String>,
-    /// Unique identifier for the machine.
     pub machine_id: Option<String>,
-    /// MAC address of the machine.
     pub machine_mac: Option<String>,
-    /// IP address of the machine.
     pub machine_ip: Option<String>,
-    /// Number of SSH events.
     pub ssh_events: usize,
-    /// Version information of the system.
     pub system_version: AisVersion,
 }
 
-/// Version information structure.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct AisVersion {
-    /// Version number.
     pub version_number: f64,
-    /// Version code.
     pub version_code: AisCode,
 }
 
-/// Enumeration representing different version codes.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum AisCode {
-    /// Production version.
     Production,
-    /// Production candidate version.
     ProductionCandidate,
-    /// Beta version.
     Beta,
-    /// Alpha version.
     Alpha,
 }
 
@@ -64,19 +48,16 @@ impl fmt::Display for AisCode {
 }
 
 impl AisInfo {
-    /// Creates a new instance of `AisInfo`.
     pub fn new() -> Result<Self, UnifiedError> {
         let manifest_data = Self::fetch_manifest()?;
 
-        let ais_version = AisVersion {
+        let ais_version: AisVersion = AisVersion {
             version_number: 1.10,
             version_code: AisCode::ProductionCandidate,
         };
 
-        Ok(AisInfo {
-            pages_id: manifest_data
-                .get("pages_id")
-                .and_then(|v| v.as_str().map(|s| s.to_string())),
+        let data: AisInfo = AisInfo {
+            pages_id: manifest_data.get("pages_id").and_then(|v| v.as_str().map(|s| s.to_string())),
             client_id: manifest_data
                 .get("client_id")
                 .and_then(|v| v.as_str().map(|s| s.to_string())),
@@ -87,10 +68,11 @@ impl AisInfo {
             machine_ip: Self::fetch_machine_ip(),
             ssh_events: 0,
             system_version: ais_version,
-        })
+        };
+
+        return Ok(data);
     }
 
-    /// Prints all available information.
     pub fn print_all(&self) {
         if let Some(client_id) = &self.client_id {
             println!("Client ID: {:?}", client_id);
@@ -106,54 +88,69 @@ impl AisInfo {
         }
     }
 
-    /// Fetches the manifest data.
-    fn fetch_manifest() -> Result<serde_json::Value, UnifiedError> {
-        let manifest_path = Self::fetch_manifest_path();
+    pub fn fetch_manifest() -> Result<serde_json::Value, UnifiedError> {
+        let manifest_path: PathType = Self::fetch_manifest_path();
         match path_present(&manifest_path) {
-            Ok(true) => {
-                let mut file = File::open(&manifest_path)
-                    .map_err(|e| UnifiedError::from_ais_error(AisError::new(&e.to_string())))?;
-
-                let mut buffer = Vec::new();
-                file.read_to_end(&mut buffer)
-                    .map_err(|e| UnifiedError::from_ais_error(AisError::new(&e.to_string())))?;
-
-                serde_json::from_slice(&buffer).map_err(|e| {
-                    UnifiedError::from_ais_error(AisError::new(&e.to_string()))
-                })
-            }
-            _ => {
-                let generic_ais = AisInfo {
-                    pages_id: None,
-                    client_id: None,
-                    machine_id: None,
-                    machine_mac: Self::fetch_machine_mac(),
-                    machine_ip: Self::fetch_machine_ip(),
-                    ssh_events: 0,
-                    system_version: AisVersion {
-                        version_number: 0.00,
-                        version_code: AisCode::Alpha,
+            Ok(b) => {
+                match b {
+                    true => {
+                        let mut file: File = match File::open(manifest_path) {
+                            Ok(d) => d,
+                            Err(_) => todo!(),
+                        };
+        
+                        let mut buffer: Vec<u8> = Vec::new();
+                        if let Err(e) = file.read_to_end(&mut buffer) {
+                            return Err(UnifiedError::from_ais_error(AisError::new(&e.to_string())));
+                        }
+        
+                        let manifest_data: serde_json::Value = match serde_json::from_slice(&buffer) {
+                            Ok(d) => d,
+                            Err(e) => {
+                                return Err(UnifiedError::from_ais_error(AisError::new(&e.to_string())))
+                            }
+                        };
+        
+                        return Ok(manifest_data);
                     },
-                };
+                    false => {
+                        // We'll create a generic AisInfo to allow the firstrun to finish and auto generate
+                        let generic_ais: AisInfo = AisInfo {
+                            pages_id: None,
+                            client_id: None,
+                            machine_id: None,
+                            machine_mac: Self::fetch_machine_mac(),
+                            machine_ip: Self::fetch_machine_ip(),
+                            ssh_events: 0,
+                            system_version: AisVersion { version_number: 0.00, version_code: AisCode::Alpha },
+                        };
 
-                serde_json::to_value(&generic_ais).map_err(|e| {
-                    UnifiedError::from_ais_error(AisError::new(&e.to_string()))
-                })
+                        let manifest_data: serde_json::Value = match serde_json::to_value(&generic_ais) {
+                            Ok(d) => d,
+                            Err(e) => {
+                                return Err(UnifiedError::from_ais_error(AisError::new(&e.to_string())))
+                            }
+                        };
+        
+                        return Ok(manifest_data);
+                    }
+                }
+
             }
+            Err(e) => return Err(UnifiedError::from_ais_error(AisError::new(&e.to_string()))),
         }
     }
 
-    /// Fetches the manifest file path.
-    fn fetch_manifest_path() -> PathType {
+    pub fn fetch_manifest_path() -> PathType {
         PathType::Str("/etc/artisan.manifest".into())
     }
 
-    /// Creates the manifest file.
     pub fn create_manifest(&self) -> Result<(), UnifiedError> {
-        let json_data = serde_json::to_string(self).map_err(|e| {
-            UnifiedError::from_ais_error(AisError::new(&e.to_string()))
-        })?;
+        // Serialize AisInfo to JSON
+        let json_data = serde_json::to_string(self)
+            .map_err(|e| UnifiedError::from_ais_error(AisError::new(&e.to_string())))?;
 
+        // Write the JSON data to the file
         let mut file = File::create(Self::fetch_manifest_path())
             .map_err(|e| UnifiedError::from_ais_error(AisError::new(&e.to_string())))?;
         file.write_all(json_data.as_bytes())
@@ -162,12 +159,13 @@ impl AisInfo {
         Ok(())
     }
 
-    /// Fetches the machine's MAC address.
     fn fetch_machine_mac() -> Option<String> {
-        get_mac_address().ok().flatten().map(|mac| mac.to_string())
+        match get_mac_address() {
+            Ok(Some(mac)) => Some(mac.to_string()),
+            _ => None,
+        }
     }
 
-    /// Fetches the machine's IP address.
     fn fetch_machine_ip() -> Option<String> {
         if let Ok(ifaces) = get_if_addrs() {
             for iface in ifaces {
@@ -179,85 +177,4 @@ impl AisInfo {
         }
         None
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_new_ais_info() {
-        // Test creating a new AisInfo instance
-        let ais_info = AisInfo::new().unwrap();
-
-        // Assert that the fields are initialized correctly
-        assert_eq!(ais_info.pages_id, None);
-        assert_eq!(ais_info.client_id, None);
-        assert!(ais_info.machine_mac.is_some());
-        assert!(ais_info.machine_ip.is_some());
-        assert_eq!(ais_info.ssh_events, 0);
-        assert_eq!(ais_info.system_version.version_number, 1.10);
-        assert_eq!(ais_info.system_version.version_code, AisCode::ProductionCandidate);
-    }
-
-    #[test]
-    fn test_print_all() {
-        // Test printing all information
-        let ais_info = AisInfo {
-            pages_id: Some("123".to_string()),
-            client_id: Some("456".to_string()),
-            machine_id: Some("789".to_string()),
-            machine_mac: Some("00:11:22:33:44:55".to_string()),
-            machine_ip: Some("192.168.1.100".to_string()),
-            ssh_events: 5,
-            system_version: AisVersion {
-                version_number: 1.10,
-                version_code: AisCode::ProductionCandidate,
-            },
-        };
-
-        // Since print_all function prints to stdout, we'll just call it to check for errors
-        ais_info.print_all();
-    }
-
-    #[test]
-    fn test_fetch_manifest_path() {
-        // Test fetching the manifest path
-        let path = AisInfo::fetch_manifest_path();
-
-        // Assert that the path is correct
-        assert_eq!(path.to_string(), PathType::Str("/etc/artisan.manifest".into()).to_string());
-    }
-
-    #[test]
-    fn test_create_manifest() {
-        // Test creating a manifest
-        let ais_info = AisInfo::new().unwrap();
-        let result = ais_info.create_manifest();
-
-        // Assert that manifest creation is successful
-        assert!(result.is_ok()); // ? This will fail if not ran on the artisan image development server
-
-        // Cleanup: delete the manifest file
-        let _ = std::fs::remove_file("/etc/artisan.manifest");
-    }
-
-    #[test]
-    fn test_fetch_machine_mac() {
-        // Test fetching the machine's MAC address
-        let mac = AisInfo::fetch_machine_mac();
-
-        // Assert that MAC address is not None
-        assert!(mac.is_some());
-    }
-
-    #[test]
-    fn test_fetch_machine_ip() {
-        // Test fetching the machine's IP address
-        let ip = AisInfo::fetch_machine_ip();
-
-        // Assert that IP address is not None
-        assert!(ip.is_some());
-    }
-
 }

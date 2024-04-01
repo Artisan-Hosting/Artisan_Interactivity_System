@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["LoggerErrorType","MyErrors"],"struct":["LoggerError"]};

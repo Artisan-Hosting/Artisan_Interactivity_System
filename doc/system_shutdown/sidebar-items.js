@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["force_logout","force_reboot","force_shutdown","hibernate","logout","reboot","shutdown","sleep"],"type":["ShutdownResult"]};

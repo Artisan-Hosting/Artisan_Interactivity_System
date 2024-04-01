@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["dump","halt","notice","output","pass","warn"]};

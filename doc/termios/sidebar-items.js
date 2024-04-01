@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["cfgetispeed","cfgetospeed","cfmakeraw","cfsetispeed","cfsetospeed","cfsetspeed","tcdrain","tcflow","tcflush","tcgetattr","tcsendbreak","tcsetattr"],"mod":["ffi"],"type":["Termios"]};

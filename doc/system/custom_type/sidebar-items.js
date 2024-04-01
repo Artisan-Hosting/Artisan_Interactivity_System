@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["PathType"],"trait":["ClonePath","CopyPath"]};

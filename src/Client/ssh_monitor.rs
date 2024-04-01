@@ -92,7 +92,6 @@ impl SshMonitor {
                     );
                 }
                 false => {
-                    warn("ssh connections are active");
                     return Ok(());
                 }
             }
@@ -146,8 +145,8 @@ impl SshMonitor {
         let user_list_critical = vec![
             "dwhitfield".to_string(),
             "root".to_string(),
-            "system".to_string(),
-            "web_admin".to_string(),
+            // "system".to_string(),
+            "admin".to_string(),
         ];
 
         if data.contains("[priv]") {

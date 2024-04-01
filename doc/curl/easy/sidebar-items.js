@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["HttpVersion","InfoType","IpResolve","NetRc","ProxyType","ReadError","SeekResult","SslVersion","TimeCondition","WriteError"],"struct":["Auth","Easy","Easy2","Form","Iter","List","Part","PostRedirections","SslOpt","Transfer"],"trait":["Handler"]};

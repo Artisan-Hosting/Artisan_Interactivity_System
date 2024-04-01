@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["create_hash","del_dir","del_file","generate_random_string","is_path","is_string_in_file","make_dir","make_dir_perm","make_file","path_present","remake_dir","truncate","untar"],"mod":["custom_type","errors"]};

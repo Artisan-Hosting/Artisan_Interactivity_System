@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["Memory","Processes","Services","Status","SubProcesses"],"fn":["timestamp"],"struct":["ProcessInfo"]};

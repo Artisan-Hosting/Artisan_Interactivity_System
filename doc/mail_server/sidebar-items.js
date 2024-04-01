@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["decrypt_received_data","handle_client","main","process_emails","send_email","start_server"],"struct":["ErrorEmail","TimedEmail"]};

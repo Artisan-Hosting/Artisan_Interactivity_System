@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["_get_array_props","check_map","decrypt_raw","encrypt_raw","initialize","insert","ping","remove","retrive","set_debug","set_prog","update_map"],"mod":["errors"],"static":["DEBUGGING","PROGNAME"]};

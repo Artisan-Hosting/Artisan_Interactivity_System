@@ -48,7 +48,7 @@ fn main() {
 
     // Spawn a thread to log operational status periodically
     thread::spawn(move || loop {
-        thread::sleep(Duration::from_secs(600));
+        thread::sleep(Duration::from_secs(600));  // Every 5 mins we just say hello
         notice("Operational");
     });
 
@@ -75,7 +75,7 @@ fn main() {
         }
 
         // Introduce a sleep to reduce CPU usage
-        thread::sleep(Duration::from_nanos(550)); // Adjust the duration as needed
+        thread::sleep(Duration::from_nanos(90)); // Adjust the duration as needed
     }
 }
 

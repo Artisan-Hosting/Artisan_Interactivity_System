@@ -69,8 +69,8 @@ impl AisInfo {
         let manifest_data = Self::fetch_manifest()?;
 
         let ais_version = AisVersion {
-            version_number: 1.10,
-            version_code: AisCode::ProductionCandidate,
+            version_number: 1.20,
+            version_code: AisCode::Production,
         };
 
         Ok(AisInfo {
@@ -196,8 +196,8 @@ mod tests {
         assert!(ais_info.machine_mac.is_some());
         assert!(ais_info.machine_ip.is_some());
         assert_eq!(ais_info.ssh_events, 0);
-        assert_eq!(ais_info.system_version.version_number, 1.10);
-        assert_eq!(ais_info.system_version.version_code, AisCode::ProductionCandidate);
+        assert_eq!(ais_info.system_version.version_number, 1.20);
+        assert_eq!(ais_info.system_version.version_code, AisCode::Production);
     }
 
     #[test]

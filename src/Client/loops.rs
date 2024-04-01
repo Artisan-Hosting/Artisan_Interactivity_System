@@ -1,20 +1,21 @@
-use pretty::{output, warn};
-use shared::{
-    emails::{Email, EmailSecure},
-    errors::{AisError, UnifiedError},
-    service::{Memory, Processes, Status},
-    ais_data::AisInfo,
-    git_data::GitAuth,
-};
-use system::ClonePath;
-use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use sysinfo::{ProcessExt, System, SystemExt};
-use system_shutdown::reboot;
 use crate::{
     git_actions::GitAction,
     site_info::{SiteInfo, Updates},
     ssh_monitor::SshMonitor,
 };
+use pretty::{output, warn};
+use shared::{
+    ais_data::AisInfo,
+    emails::{Email, EmailSecure},
+    errors::{AisError, Caller, ErrorInfo, UnifiedError},
+    git_data::GitAuth,
+    service::{Memory, Processes, Status},
+};
+use systemstat::Duration;
+use std::{sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard}, thread};
+use sysinfo::{ProcessExt, System, SystemExt};
+use system::ClonePath;
+use system_shutdown::reboot;
 
 /// Updates the website continuously.
 pub fn website_update_loop(
@@ -22,10 +23,14 @@ pub fn website_update_loop(
     ais_data: Arc<RwLock<AisInfo>>,
     git_creds: Arc<RwLock<GitAuth>>,
 ) -> Result<(), UnifiedError> {
-    let mut site_data = acquire_write_lock(&system_data)?;
+    let mut site_data = acquire_write_lock(
+        &system_data,
+        Caller::Function(true, Some("Website Update Loop".to_owned())),
+    )?;
 
-    let ais_info = acquire_read_lock(&ais_data)?;
-    let git_info = acquire_read_lock(&git_creds)?;
+    let ais_info = acquire_read_lock(&ais_data, Caller::Function(true, Some("Website Update Loop, ais_info".to_owned())))?;
+    // let ais_info = AisInfo::new();
+    let git_info = acquire_read_lock(&git_creds, Caller::Function(true, Some("Website Update Loop, git_info".to_owned())))?;
 
     let new_site_data = SiteInfo::new(Arc::clone(&git_creds))?;
 
@@ -76,7 +81,10 @@ pub fn website_update_loop(
 /// Updates machine-specific information.
 pub fn machine_update_loop(ais_data: Arc<RwLock<AisInfo>>) -> Result<(), UnifiedError> {
     let ais_new_data = AisInfo::new()?;
-    let mut ais_write_safe_data = acquire_write_lock(&ais_data)?;
+    let mut ais_write_safe_data = acquire_write_lock(
+        &ais_data,
+        Caller::Function(true, Some("Machine Update Loop".to_owned())),
+    )?;
 
     ais_write_safe_data.client_id = ais_new_data.client_id;
     ais_write_safe_data.machine_id = ais_new_data.machine_id;
@@ -104,6 +112,8 @@ pub fn machine_update_loop(ais_data: Arc<RwLock<AisInfo>>) -> Result<(), Unified
         reboot().unwrap(); //todo  maybe handle this better one day
     };
 
+    drop(ais_write_safe_data);
+    thread::sleep(Duration::from_nanos(100));
     Ok(())
 }
 
@@ -112,8 +122,8 @@ pub fn service_update_loop(
     system_service_data: Arc<RwLock<Processes>>,
     ais_data: Arc<RwLock<AisInfo>>,
 ) -> Result<(), UnifiedError> {
-    let service_data = acquire_read_lock(&system_service_data)?;
-    let ais_info = acquire_read_lock(&ais_data)?;
+    let service_data = acquire_read_lock(&system_service_data, Caller::Function(true, Some("Service Update Loop, service_data".to_owned())))?;
+    let ais_info = acquire_read_lock(&ais_data, Caller::Function(true, Some("Service Update Loop, ais_info".to_owned())))?;
 
     let mut data = Vec::new();
 
@@ -127,7 +137,8 @@ pub fn service_update_loop(
                     let email = Email {
                         subject: format!(
                             "{}: Service stopped",
-                            ais_info.machine_id
+                            ais_info
+                                .machine_id
                                 .clone()
                                 .unwrap_or_else(|| String::from("Failure parsing"))
                         ),
@@ -135,7 +146,10 @@ pub fn service_update_loop(
                     };
                     let phone_home = EmailSecure::new(email)?;
                     phone_home.send()?;
-                    warn(&format!("Service {} has stopped. Emails has been sent", service_info.service));
+                    warn(&format!(
+                        "Service {} has stopped. Emails has been sent",
+                        service_info.service
+                    ));
                 }
                 Status::Error => {
                     let email = Email {
@@ -157,7 +171,10 @@ pub fn service_update_loop(
                             drop(phone_home);
                         }
                         false => {
-                            warn(&format!("Service {} has entered an erroneous state. Emails have been sent", service_info.service));
+                            warn(&format!(
+                                "Service {} has entered an erroneous state. Emails have been sent",
+                                service_info.service
+                            ));
                             phone_home.send()?
                         }
                     }
@@ -190,12 +207,13 @@ pub fn service_update_loop(
         }
         data.push(new_service_to_update);
     }
-
+    drop(ais_info);
     drop(service_data);
 
-    let mut service_data_old = acquire_write_lock(&system_service_data)?;
-
-    drop(ais_info);
+    let mut service_data_old = acquire_write_lock(
+        &system_service_data,
+        Caller::Function(true, Some("Service Update Loop, New service data".to_owned())),
+    )?;
 
     *service_data_old = Processes::Services(data);
     Ok(())
@@ -219,17 +237,29 @@ pub fn monitor_ssh_connections(
 }
 
 /// Helper function to acquire a read lock safely.
-fn acquire_read_lock<T>(lock: &Arc<RwLock<T>>) -> Result<RwLockReadGuard<'_, T>, UnifiedError> {
-    lock.try_read().map_err(|e| UnifiedError::from_ais_error(AisError::ThreadedDataError(
-        Some(format!("Error acquiring read lock: {}", e.to_string())),
-    )))
+pub fn acquire_read_lock<T: 'static>(
+    lock: &Arc<RwLock<T>>,
+    caller: Caller,
+) -> Result<RwLockReadGuard<'_, T>, UnifiedError> {
+    lock.read().map_err(|_| {
+        UnifiedError::AisError(
+            ErrorInfo::new(caller),
+            AisError::ThreadedDataError(Some(format!("Error acquiring Read lock"))),
+        )
+    })
 }
 
 /// Helper function to acquire a write lock safely.
-fn acquire_write_lock<T>(lock: &Arc<RwLock<T>>) -> Result<RwLockWriteGuard<'_, T>, UnifiedError> {
-    lock.try_write().map_err(|e| UnifiedError::from_ais_error(AisError::ThreadedDataError(
-        Some(format!("Error acquiring write lock: {}", e.to_string())),
-    )))
+pub fn acquire_write_lock<T: 'static>(
+    lock: &Arc<RwLock<T>>,
+    caller: Caller,
+) -> Result<RwLockWriteGuard<'_, T>, UnifiedError> {
+    lock.write().map_err(|_| {
+        UnifiedError::AisError(
+            ErrorInfo::new(caller),
+            AisError::ThreadedDataError(Some(format!("Error acquiring Write lock"))),
+        )
+    })
 }
 
 #[cfg(test)]

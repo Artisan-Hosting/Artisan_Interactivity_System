@@ -8,8 +8,8 @@ use std::{
 };
 
 use system::{create_hash, errors::SystemError, path_present, truncate, PathType};
-use shared::{errors::{AisError, UnifiedError}, git_data::GitAuth};
-use crate::git_actions::GitAction;
+use shared::{errors::{Caller, UnifiedError}, git_data::GitAuth};
+use crate::{git_actions::GitAction, loops::acquire_read_lock};
 
 /// Enum representing the update status of a site.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -42,14 +42,7 @@ impl SiteInfo {
     pub fn new(
         git_cred: Arc<RwLock<GitAuth>>,
     ) -> Result<Self, UnifiedError> {
-        let git_creds: RwLockReadGuard<'_, GitAuth> = match git_cred.read() {
-            Ok(d) => d,
-            Err(_) => {
-                return Err(UnifiedError::from_ais_error(AisError::ThreadedDataError(Some(
-                    String::from("Git Creds"),
-                ))))
-            }
-        };
+        let git_creds = acquire_read_lock(&git_cred, Caller::Impl(true, Some("Site Info".to_owned())))?;
 
         let application_folder = PathType::PathBuf(Self::get_site_folder(&git_creds)?);
 

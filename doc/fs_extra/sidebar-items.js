@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"fn":["copy_items","copy_items_with_progress","move_items","move_items_with_progress","remove_items"],"mod":["dir","error","file"],"struct":["TransitProcess"]};

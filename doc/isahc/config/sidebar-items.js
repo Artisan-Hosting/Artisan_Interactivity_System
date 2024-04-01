@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"enum":["DnsCache","IpVersion","RedirectPolicy"],"struct":["CaCertificate","ClientCertificate","Dialer","DialerParseError","ExpectContinue","NetworkInterface","PrivateKey","ResolveMap","SslOption","VersionNegotiation"],"trait":["Configurable"]};

@@ -1,1 +1,0 @@
-window.SIDEBAR_ITEMS = {"struct":["Easy2Handle","EasyHandle","Events","Message","Multi","SocketEvents","WaitFd"],"type":["Socket"]};

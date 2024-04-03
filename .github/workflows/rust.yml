@@ -47,7 +47,10 @@ jobs:
           sudo cp -v ./dusad.service /etc/systemd/system/dusad.service
           sudo systemctl daemon-reload
           sudo systemctl enable dusad --now
-
+      
+      - name: Checkout code AIS
+        uses: actions/checkout@v4
+      
       - name: building AIS
         run: |
           cd .. 

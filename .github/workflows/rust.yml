@@ -30,8 +30,11 @@ jobs:
           sudo addgroup --system dusa
           sudo adduser --system dusa
       - name: Update submodule and running makefile
-        run: |
-          export PATH="$HOME/.cargo/bin:$PATH"
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+        run: |        
           git submodule update --init --recursive
           cd dusa
           sudo make -f makefile

@@ -13,7 +13,7 @@ use shared::{
 };
 use systemstat::Duration;
 use std::{sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard}, thread};
-use sysinfo::{ProcessExt, System, SystemExt};
+use sysinfo::System;
 use system::ClonePath;
 use system_shutdown::reboot;
 
@@ -278,6 +278,7 @@ mod tests {
         assert!(result.is_ok());
     }
 
+    #[cfg(feature = "software")]
     #[test]
     fn test_service_update_loop_success() {
         // Arrange

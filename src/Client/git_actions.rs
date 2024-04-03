@@ -148,6 +148,7 @@ fn execute_git_hash_command(args: &[&str]) -> Result<String, UnifiedError> {
     }
 }
 
+#[cfg(feature = "git")]
 #[cfg(test)]
 mod tests {
     use system::del_dir;

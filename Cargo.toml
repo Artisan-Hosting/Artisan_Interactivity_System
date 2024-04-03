@@ -3,6 +3,11 @@ name = "Artisan_Interactivity_System"
 version = "1.0.0"
 edition = "2021"
 
+[features]
+dusa = [] # I havn't figure out how workflows can call dusa yet so these tests will be skipped, but we run them locally
+software = [] # the software status loop will fail on workflows and non ais systems.
+git = [] # This needs a repo pulled down on a host and a artisan.cf file generated to pass 
+
 [dependencies]
 
 # text output 
@@ -18,7 +23,7 @@ chrono = "0.4"
 fs_extra = "1"
 
 # Git operations
-git2 = "0.13.10"
+git2 = "0.18.3"
 
 # Get hostname 
 gethostname = "0.4.3"
@@ -27,10 +32,10 @@ gethostname = "0.4.3"
 hex = "0.4.3"
 
 # Hostname services
-hostname = {version = "^0.3", features = ["set"]}
+hostname = {version = "^0.4", features = ["set"]}
 
 # Get network interface addresses
-if-addrs = "0.9.0"
+if-addrs = "0.12.0"
 
 # HTTP client library
 isahc = "1.7.2"
@@ -56,7 +61,7 @@ pretty = { git = "https://github.com/Dj-Codeman/pretty.git" }
 # Process information and system statistics
 recs = { git = "https://github.com/Dj-Codeman/recs.git" }
 systemstat = { git = "https://github.com/valpackett/systemstat.git" }
-sysinfo = "0.22.0"
+sysinfo = "0.30.8"
 system = { git = "https://github.com/Dj-Codeman/system.git" }
 system_shutdown = "4.0.1"
 
@@ -71,7 +76,7 @@ systemctl = "0.3.1"
 thiserror = "1.0.29"
 
 # User management
-users = "0.9.0"
+users = "0.11.0"
 
 [lib]
 name = "shared"

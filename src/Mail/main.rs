@@ -37,7 +37,7 @@ struct ErrorEmail {
 fn send_email(subject: String, body: String) -> Result<(), UnifiedError> {
     // Build the email
     let email = Message::builder()
-        .to("DarrionWhitfield <dwhitfield@artisanhosting.net>"
+        .to("Enlightened One <enlightened@artisanhosting.net>"
             .parse()
             .map_err(|e| {
                 UnifiedError::from_ais_error(AisError::new(&format!("Failed to build email: {}", e)))
@@ -58,7 +58,7 @@ fn send_email(subject: String, body: String) -> Result<(), UnifiedError> {
     // The smpt credentials
     let creds = Credentials::new(
         "ais_bot@artisanhosting.net".to_owned(),
-        "&wvh\"x2)!62x93Cc-w".to_owned(),
+        "&wvh\"x2)!62x93Cc-w".to_owned(), // This needed to be encrypted like the artisan.cf
     );
 
     let mailer = SmtpTransport::relay("mail.ramfield.net")
@@ -136,7 +136,7 @@ fn process_emails(emails: Arc<RwLock<Vec<TimedEmail>>>, errors: Arc<RwLock<Vec<E
                             subject: Some(e.to_string()),
                             occoured_at: Instant::now(),
                         });
-                        // Skip to the next email without incrementing i
+                        // Skip to the next email without removing the email from the vec i
                         i += 1;
                     }
                 }

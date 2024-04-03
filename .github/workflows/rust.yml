@@ -29,6 +29,8 @@ jobs:
         run: |
           sudo addgroup --system dusa
           sudo adduser --system dusa
+      - name: Add Cargo to PATH
+        run: export PATH="$HOME/.cargo/bin:$PATH"
       - name: Update submodule and running makefile
         run: |
           git submodule update --init --recursive

@@ -71,7 +71,7 @@ systemctl = "0.3.1"
 thiserror = "1.0.29"
 
 # User management
-users = "0.9.0"
+users = "0.11.0"
 
 [lib]
 name = "shared"

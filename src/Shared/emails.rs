@@ -102,6 +102,7 @@ mod tests {
         assert!(!invalid_email.is_valid());
     }
 
+    #[cfg(feature = "dusa")]
     #[test]
     fn test_emailsecure_new() {
         let email = Email::new("Subject".to_string(), "Body".to_string());
@@ -109,6 +110,7 @@ mod tests {
         assert!(!email_secure.data.is_empty());
     }
 
+    #[cfg(feature = "dusa")]
     #[test]
     fn test_emailsecure_send() {
         // Note: This test assumes there's a server listening on the specified address.

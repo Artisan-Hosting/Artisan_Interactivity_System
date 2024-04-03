@@ -3,6 +3,11 @@ name = "Artisan_Interactivity_System"
 version = "1.0.0"
 edition = "2021"
 
+[features]
+dusa = [] # I havn't figure out how workflows can call dusa yet so these tests will be skipped, but we run them locally
+software = [] # the software status loop will fail on workflows and non ais systems.
+git = [] # This needs a repo pulled down on a host and a artisan.cf file generated to pass 
+
 [dependencies]
 
 # text output 

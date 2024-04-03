@@ -1,0 +1,55 @@
+name: Build and Test AIS
+
+on:
+  push:
+    branches:
+      - main
+      - dependencies
+      - changes
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install OpenSSL dependencies
+        run: sudo apt-get install libssl-dev
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Update cargo
+        run: cargo update
+
+      - name: Create users and group
+        run: |
+          sudo addgroup --system dusa
+          sudo adduser --system dusa
+
+      - name: Build and Install DUSA
+        run: |
+          git submodule update --init --recursive
+          cd dusa
+          cargo update
+          cargo build --release
+          sudo mv -v ./target/release/server /usr/bin/dusad
+          sudo mv -v ./target/release/cli /usr/bin/dusa
+          sudo chmod +x -v /usr/bin/dusad /usr/bin/dusa
+          sudo setcap cap_chown=ep /usr/bin/dusa
+          sudo setcap cap_chown=ep /usr/bin/dusad
+          sudo cp -v ./dusad.service /etc/systemd/system/dusad.service
+          sudo systemctl daemon-reload
+          sudo systemctl enable dusad --now
+
+      - name: building AIS
+        run: |
+          cargo test --release
+
+      - name: Clean up
+        run: rm -r ./target/*

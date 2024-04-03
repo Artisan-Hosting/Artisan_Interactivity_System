@@ -24,6 +24,9 @@ jobs:
         run: |
           sudo addgroup --system dusa
           sudo adduser --system dusa
+      - name: Install Rust
+        run: |
+          rustup --version || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       - name: Update submodule and running makefile
         run: |
           git submodule update --init --recursive

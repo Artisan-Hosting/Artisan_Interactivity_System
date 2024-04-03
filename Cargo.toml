@@ -27,7 +27,7 @@ gethostname = "0.4.3"
 hex = "0.4.3"
 
 # Hostname services
-hostname = {version = "^0.3", features = ["set"]}
+hostname = {version = "^0.4", features = ["set"]}
 
 # Get network interface addresses
 if-addrs = "0.9.0"

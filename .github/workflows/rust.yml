@@ -44,13 +44,9 @@ jobs:
           sudo chmod +x -v /usr/bin/dusad /usr/bin/dusa
           sudo setcap cap_chown=ep /usr/bin/dusa
           sudo setcap cap_chown=ep /usr/bin/dusad
-
-      - name: Register with systemd
-        run: |
           sudo cp -v ./dusad.service /etc/systemd/system/dusad.service
           sudo systemctl daemon-reload
           sudo systemctl enable dusad --now
-
 
       - name: building AIS
         run: |

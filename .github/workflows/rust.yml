@@ -24,7 +24,7 @@ jobs:
         run: |
           git submodule update --init --recursive
           cd dusa
-          make -f makefile
+          sudo make -f makefile
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:

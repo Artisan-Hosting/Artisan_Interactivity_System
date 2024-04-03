@@ -50,7 +50,7 @@ jobs:
 
       - name: building AIS
         run: |
-          cargo test --release --verbose
+          sudo cargo test --release --verbose
 
       - name: Clean up
         run: rm -r ./target/*

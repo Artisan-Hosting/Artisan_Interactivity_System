@@ -110,6 +110,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "When tested in git workflow this will hang, need a conditional way to test this"]
     fn test_emailsecure_send() {
         // Note: This test assumes there's a server listening on the specified address.
         // Replace it with a valid server address for testing.

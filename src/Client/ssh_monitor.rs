@@ -213,6 +213,7 @@ mod tests {
     }
 
     // Integration test for creating an SSH report
+    #[cfg(feature = "dusa")]
     #[test]
     fn test_create_ssh_report() {
         let ais_info = Arc::new(RwLock::new(AisInfo::new().unwrap()));

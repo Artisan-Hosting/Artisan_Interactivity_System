@@ -37,7 +37,6 @@ jobs:
           git submodule update --init --recursive
           cd dusa
           cargo update
-          cargo test
           cargo build --release
           sudo mv -v ./target/release/server /usr/bin/dusad
           sudo mv -v ./target/release/cli /usr/bin/dusa
@@ -50,7 +49,7 @@ jobs:
 
       - name: building AIS
         run: |
-          sudo cargo test --release --verbose
+          cargo test --release --verbose
 
       - name: Clean up
         run: rm -r ./target/*

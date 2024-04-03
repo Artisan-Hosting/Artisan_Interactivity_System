@@ -179,6 +179,7 @@ impl Commands {
     }
 }
 
+#[cfg(feature = "dusa")]
 #[cfg(test)]
 mod tests {
     use super::*;

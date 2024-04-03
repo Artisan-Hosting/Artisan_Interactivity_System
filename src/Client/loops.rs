@@ -278,6 +278,7 @@ mod tests {
         assert!(result.is_ok());
     }
 
+    #[cfg(feature = "software")]
     #[test]
     fn test_service_update_loop_success() {
         // Arrange

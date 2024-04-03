@@ -61,7 +61,7 @@ pretty = { git = "https://github.com/Dj-Codeman/pretty.git" }
 # Process information and system statistics
 recs = { git = "https://github.com/Dj-Codeman/recs.git" }
 systemstat = { git = "https://github.com/valpackett/systemstat.git" }
-sysinfo = "0.22.0"
+sysinfo = "0.30.8"
 system = { git = "https://github.com/Dj-Codeman/system.git" }
 system_shutdown = "4.0.1"
 

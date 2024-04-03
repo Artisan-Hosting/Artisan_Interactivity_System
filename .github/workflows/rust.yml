@@ -20,6 +20,9 @@ jobs:
     - name: Updating cargo
       run: |
         cargo update
+    - name: Install dependency from makefile
+      run: |
+        make dusa/makefile
     - name: Set up Rust
       uses: actions-rs/toolchain@v1
       with:

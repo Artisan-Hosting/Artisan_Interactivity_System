@@ -32,3 +32,4 @@ jobs:
           override: true
       - name: Build and test with cargo
         run: cargo test --release --verbose
+

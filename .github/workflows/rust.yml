@@ -1,0 +1,29 @@
+name: AIS testing
+
+on:
+  push:
+    branches:
+      - main
+      - dependencies
+      - changes
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: openssl dependencies
+      run: |
+        sudo apt-get install libssl-dev
+    - name: Updating cargo
+      run: |
+        cargo update
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v2
+      with:
+        toolchain: stable
+        override: true
+    - name: Build and test with cargo
+      run: cargo test --release --verbose

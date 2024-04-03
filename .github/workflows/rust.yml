@@ -17,6 +17,11 @@ jobs:
       - name: openssl dependencies
         run: |
           sudo apt-get install libssl-dev
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
       - name: Updating cargo
         run: |
           cargo update
@@ -24,19 +29,11 @@ jobs:
         run: |
           sudo addgroup --system dusa
           sudo adduser --system dusa
-      - name: Install Rust
-        run: |
-          rustup --version || curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
       - name: Update submodule and running makefile
         run: |
           git submodule update --init --recursive
           cd dusa
           sudo make -f makefile
-      - name: Set up Rust
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
       - name: Build and test with cargo
         run: cargo test --release --verbose
 

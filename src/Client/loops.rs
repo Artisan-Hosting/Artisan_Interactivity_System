@@ -13,7 +13,7 @@ use shared::{
 };
 use systemstat::Duration;
 use std::{sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard}, thread};
-use sysinfo::{ProcessExt, System, SystemExt};
+use sysinfo::System;
 use system::ClonePath;
 use system_shutdown::reboot;
 

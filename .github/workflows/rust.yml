@@ -21,8 +21,8 @@ jobs:
         run: |
           cargo update
       - name: Update submodule and navigate to makefile directory
-          # git submodule update --init --recursive
         run: |
+          git submodule update --init --recursive
           cd dusa
       - name: Run makefile
         run: make -f makefile

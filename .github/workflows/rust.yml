@@ -12,21 +12,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: openssl dependencies
-      run: |
-        sudo apt-get install libssl-dev
-    - name: Updating cargo
-      run: |
-        cargo update
-    - name: Install dependency from makefile
-      run: |
-        sudo make /dusa/makefile
-    - name: Set up Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-    - name: Build and test with cargo
-      run: cargo test --release --verbose
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: openssl dependencies
+        run: |
+          sudo apt-get install libssl-dev
+      - name: Updating cargo
+        run: |
+          cargo update
+      - name: Update submodule and navigate to makefile directory
+        run: |
+          git submodule update --init --recursive
+          cd dusa
+      - name: Run makefile
+        run: make -f makefile
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Build and test with cargo
+        run: cargo test --release --verbose

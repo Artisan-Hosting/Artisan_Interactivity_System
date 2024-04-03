@@ -20,6 +20,10 @@ jobs:
       - name: Updating cargo
         run: |
           cargo update
+      - name: Create users
+        run: |
+          sudo addgroup --system dusa
+          sudo adduser --system dusa
       - name: Update submodule and running makefile
         run: |
           git submodule update --init --recursive

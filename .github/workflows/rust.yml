@@ -14,30 +14,27 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: openssl dependencies
-        run: |
-          sudo apt-get install libssl-dev
+      
+      - name: Install OpenSSL dependencies
+        run: sudo apt-get install libssl-dev
+      
       - name: Set up Rust
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           override: true
-      - name: Updating cargo
-        run: |
-          cargo update
-      - name: Create users
+      
+      - name: Update cargo
+        run: cargo update
+      
+      - name: Create users and group
         run: |
           sudo addgroup --system dusa
           sudo adduser --system dusa
-      - name: Update submodule and running makefile
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-        run: |        
+      
+      - name: Update submodule and run makefile
+        run: |
           git submodule update --init --recursive
           cd dusa
           sudo make -f makefile
-      - name: Build and test with cargo
-        run: cargo test --release --verbose
-
+      

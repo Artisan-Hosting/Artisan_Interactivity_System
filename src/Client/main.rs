@@ -47,11 +47,6 @@ fn main() {
     let ais_data: UnifiedErrorResult<AisInfo> = UnifiedErrorResult::new(AisInfo::new());
     let ais_rw: Arc<RwLock<AisInfo>> = Arc::new(RwLock::new(ais_data.unwrap()));
 
-    // Initializing site data information
-    // let system_data: UnifiedErrorResult<SiteInfo> =
-    //     UnifiedErrorResult::new(SiteInfo::new(acquire_read_lock(Arc::clone(&git_creds_rw), Caller::Function(true, Some(String::from("Getting"))))));
-    // let system_data_rw: Arc<RwLock<SiteInfo>> = Arc::new(RwLock::new(system_data.unwrap()));
-
     // Initializing the SSH monitor
     let ssh_data: SshMonitor = SshMonitor::new();
 
@@ -90,7 +85,6 @@ fn main() {
 
 /// Initialize handlers for various tasks
 fn initialize_handlers(
-    // system_data_rw: Arc<RwLock<SiteInfo>>,
     ais_rw: Arc<RwLock<AisInfo>>,
     git_creds_rw: Arc<RwLock<GitCredentials>>,
     system_service_rw: Arc<RwLock<Processes>>,
@@ -118,7 +112,6 @@ fn initialize_handlers(
 
     // Spawn a thread to monitor website updates
     let website_monitor = {
-        // let system_data_rw_clone = Arc::clone(&system_data_rw);
         let ais_rw_clone = Arc::clone(&ais_rw);
         let git_creds_rw_clone = Arc::clone(&git_creds_rw);
         thread::spawn(move || {

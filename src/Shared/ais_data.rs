@@ -70,7 +70,7 @@ impl AisInfo {
 
         let ais_version = AisVersion {
             version_number: 1.31,
-            version_code: AisCode::Beta,
+            version_code: AisCode::ProductionCandidate,
         };
 
         Ok(AisInfo {
@@ -197,7 +197,7 @@ mod tests {
         assert!(ais_info.machine_ip.is_some());
         assert_eq!(ais_info.ssh_events, 0);
         assert_eq!(ais_info.system_version.version_number, 1.31);
-        assert_eq!(ais_info.system_version.version_code, AisCode::Beta);
+        assert_eq!(ais_info.system_version.version_code, AisCode::ProductionCandidate);
     }
 
     #[test]
@@ -211,7 +211,7 @@ mod tests {
             machine_ip: Some("192.168.1.100".to_string()),
             ssh_events: 5,
             system_version: AisVersion {
-                version_number: 1.10,
+                version_number: 1.31,
                 version_code: AisCode::ProductionCandidate,
             },
         };

@@ -91,19 +91,15 @@ name = "mail_server"
 path = "src/Mail/main.rs"
 
 [[bin]]
-name = "ssh_monitor"
-path = "src/SshLogger/main.rs"
-
-[[bin]]
-name = "generate_credentials"
+name = "ais_credentials"
 path = "src/Tools/git_cf/main.rs"
 
 [[bin]]
-name = "generate_manifest"
+name = "ais_manifest"
 path = "src/Tools/manifest/main.rs"
 
 [[bin]]
-name = "clone_repo"
+name = "ais_clone"
 path = "src/Tools/git_clone/main.rs"
 
 [[bin]]

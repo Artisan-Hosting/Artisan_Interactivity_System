@@ -219,7 +219,6 @@ mod tests {
     #[cfg(feature = "dusa")]
     #[test]
     fn test_create_ssh_report() {
-        use std::result;
 
         let ais_info = Arc::new(RwLock::new(AisInfo::new().unwrap()));
 

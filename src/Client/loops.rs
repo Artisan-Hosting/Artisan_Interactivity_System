@@ -8,74 +8,72 @@ use shared::{
     ais_data::AisInfo,
     emails::{Email, EmailSecure},
     errors::{AisError, Caller, ErrorInfo, UnifiedError},
-    git_data::GitAuth,
+    git_data::{GitAuth, GitCredentials},
     service::{Memory, Processes, Status},
 };
-use systemstat::Duration;
-use std::{sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard}, thread};
+use std::{
+    sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
+    thread,
+};
 use sysinfo::System;
 use system::ClonePath;
 use system_shutdown::reboot;
+use systemstat::Duration;
 
-/// Updates the website continuously.
 pub fn website_update_loop(
-    system_data: Arc<RwLock<SiteInfo>>,
     ais_data: Arc<RwLock<AisInfo>>,
-    git_creds: Arc<RwLock<GitAuth>>,
+    git_creds: Arc<RwLock<GitCredentials>>,
 ) -> Result<(), UnifiedError> {
-    let mut site_data = acquire_write_lock(
-        &system_data,
-        Caller::Function(true, Some("Website Update Loop".to_owned())),
+    let ais_info = acquire_read_lock(
+        &ais_data,
+        Caller::Function(true, Some("Website Update Loop, ais_info".to_owned())),
     )?;
 
-    let ais_info = acquire_read_lock(&ais_data, Caller::Function(true, Some("Website Update Loop, ais_info".to_owned())))?;
-    // let ais_info = AisInfo::new();
-    let git_info = acquire_read_lock(&git_creds, Caller::Function(true, Some("Website Update Loop, git_info".to_owned())))?;
+    let git_info = acquire_read_lock(
+        &git_creds,
+        Caller::Function(true, Some("Website Update Loop, git_info".to_owned())),
+    )?;
 
-    let new_site_data = SiteInfo::new(Arc::clone(&git_creds))?;
+    for git_credential in &git_info.auths {
+        let new_site_data = SiteInfo::new(git_credential)?;
 
-    match new_site_data.application_status {
-        Updates::UpToDate => {
-            site_data.application_status = new_site_data.application_status;
-            drop(ais_info);
-            Ok(())
-        }
-        Updates::OutOfDate => {
-            let site_update_action = GitAction::Pull(site_data.application_folder.clone_path());
-            let result: Result<bool, UnifiedError> = site_update_action.execute();
-            match result {
-                Ok(ok) => {
-                    match ok {
-                        true => {
-                            site_data.application_status = new_site_data.application_status;
-
+        // Perform site updates based on new_site_data
+        match new_site_data.application_status {
+            Updates::UpToDate => {
+                // Handle up-to-date scenario
+                // You may perform some actions if the application is already up-to-date
+            }
+            Updates::OutOfDate => {
+                // Handle out-of-date scenario
+                let site_update_action = GitAction::Pull(new_site_data.application_folder.clone_path());
+                match site_update_action.execute() {
+                    Ok(ok) => {
+                        if ok {
+                            // Successful update
                             let mail = Email {
                                 subject: "Applied Update".to_owned(),
-                                body: format!("The system: {} Has just applied a new update from the repo: {}.", ais_info.machine_id.clone().unwrap_or_else(|| String::from("Failed to parse")), git_info.repo),
+                                body: format!("The system: {} has just applied a new update from the repo: {}.", ais_info.machine_id.clone().unwrap_or_else(|| String::from("Failed to parse")), git_credential.repo),
                             };
                             let phone_home = EmailSecure::new(mail)?;
                             phone_home.send()?;
-                            drop(ais_info);
                             output("GREEN", "UPDATE FINISHED SUCCESSFULLY");
-                            Ok(())
-                        }
-                        false => {
+                        } else {
+                            // Update failed
                             let mail = Email {
                                 subject: "Update failed".to_owned(),
-                                body: format!("The system: {} Has encountered and error applying an update from the repo: {}.", ais_info.machine_id.clone().unwrap_or_else(|| String::from("Failed to parse")), git_info.repo),
+                                body: format!("The system: {} has encountered an error applying an update from the repo: {}.", ais_info.machine_id.clone().unwrap_or_else(|| String::from("Failed to parse")), git_credential.repo),
                             };
                             let phone_home = EmailSecure::new(mail)?;
                             phone_home.send()?;
-                            drop(ais_info);
                             warn("An error occurred while updating");
-                            Ok(())
                         }
                     }
+                    Err(e) => return Err(e),
                 }
-                Err(e) => Err(e),
             }
         }
     }
+    Ok(())
 }
 
 /// Updates machine-specific information.
@@ -122,8 +120,14 @@ pub fn service_update_loop(
     system_service_data: Arc<RwLock<Processes>>,
     ais_data: Arc<RwLock<AisInfo>>,
 ) -> Result<(), UnifiedError> {
-    let service_data = acquire_read_lock(&system_service_data, Caller::Function(true, Some("Service Update Loop, service_data".to_owned())))?;
-    let ais_info = acquire_read_lock(&ais_data, Caller::Function(true, Some("Service Update Loop, ais_info".to_owned())))?;
+    let service_data = acquire_read_lock(
+        &system_service_data,
+        Caller::Function(true, Some("Service Update Loop, service_data".to_owned())),
+    )?;
+    let ais_info = acquire_read_lock(
+        &ais_data,
+        Caller::Function(true, Some("Service Update Loop, ais_info".to_owned())),
+    )?;
 
     let mut data = Vec::new();
 
@@ -212,7 +216,10 @@ pub fn service_update_loop(
 
     let mut service_data_old = acquire_write_lock(
         &system_service_data,
-        Caller::Function(true, Some("Service Update Loop, New service data".to_owned())),
+        Caller::Function(
+            true,
+            Some("Service Update Loop, New service data".to_owned()),
+        ),
     )?;
 
     *service_data_old = Processes::Services(data);

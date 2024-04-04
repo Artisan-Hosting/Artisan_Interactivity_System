@@ -14,41 +14,53 @@ use std::{
 };
 
 use pretty::{notice, warn};
-use shared::{ais_data::AisInfo, encrypt::Dusa, errors::{UnifiedError, UnifiedErrorResult}, git_data::GitAuth, service::Processes};
+use shared::{
+    ais_data::AisInfo,
+    encrypt::Dusa,
+    errors::{Caller, UnifiedError, UnifiedErrorResult},
+    git_data::{GitAuth, GitCredentials},
+    service::Processes,
+};
 
-use loops::{machine_update_loop, monitor_ssh_connections, service_update_loop, website_update_loop};
+use loops::{
+    acquire_read_lock, machine_update_loop, monitor_ssh_connections, service_update_loop, website_update_loop
+};
 use site_info::SiteInfo;
 use ssh_monitor::SshMonitor;
 
 /// Entry point of the application
 fn main() {
+    // Initializing GitHub information
+    let git_creds_data: GitCredentials = GitCredentials::new().unwrap();
+    warn(&format!("{:?}", &git_creds_data));
+    let git_creds_rw: Arc<RwLock<GitCredentials>> = Arc::new(RwLock::new(git_creds_data));
+
     // Getting system service information
-    let system_services_data: UnifiedErrorResult<Processes> = UnifiedErrorResult::new(Processes::new());
-    let system_service_rw: Arc<RwLock<Processes>> = Arc::new(RwLock::new(system_services_data.unwrap()));
+    let system_services_data: UnifiedErrorResult<Processes> =
+        UnifiedErrorResult::new(Processes::new());
+    let system_service_rw: Arc<RwLock<Processes>> =
+        Arc::new(RwLock::new(system_services_data.unwrap()));
 
     // Initializing Dusa connection
-    let dusa_data: UnifiedErrorResult<Dusa> = UnifiedErrorResult::new(Dusa::initialize(Arc::clone(&system_service_rw)));
+    let dusa_data: UnifiedErrorResult<Dusa> =
+        UnifiedErrorResult::new(Dusa::initialize(Arc::clone(&system_service_rw)));
     let _dusa_data_rw: Arc<RwLock<Dusa>> = Arc::new(RwLock::new(dusa_data.unwrap()));
 
     // Initialize the AIS information
     let ais_data: UnifiedErrorResult<AisInfo> = UnifiedErrorResult::new(AisInfo::new());
     let ais_rw: Arc<RwLock<AisInfo>> = Arc::new(RwLock::new(ais_data.unwrap()));
 
-    // Initializing GitHub information
-    let git_creds_data: UnifiedErrorResult<GitAuth> = UnifiedErrorResult::new(GitAuth::new());
-    let git_creds_rw: Arc<RwLock<GitAuth>> = Arc::new(RwLock::new(git_creds_data.unwrap()));
-
     // Initializing site data information
-    let system_data: UnifiedErrorResult<SiteInfo> =
-        UnifiedErrorResult::new(SiteInfo::new(Arc::clone(&git_creds_rw)));
-    let system_data_rw: Arc<RwLock<SiteInfo>> = Arc::new(RwLock::new(system_data.unwrap()));
+    // let system_data: UnifiedErrorResult<SiteInfo> =
+    //     UnifiedErrorResult::new(SiteInfo::new(acquire_read_lock(Arc::clone(&git_creds_rw), Caller::Function(true, Some(String::from("Getting"))))));
+    // let system_data_rw: Arc<RwLock<SiteInfo>> = Arc::new(RwLock::new(system_data.unwrap()));
 
     // Initializing the SSH monitor
     let ssh_data: SshMonitor = SshMonitor::new();
 
     // Spawn a thread to log operational status periodically
     thread::spawn(move || loop {
-        thread::sleep(Duration::from_secs(600));  // Every 5 mins we just say hello
+        thread::sleep(Duration::from_secs(600)); // Every 5 mins we just say hello
         notice("Operational");
     });
 
@@ -56,7 +68,7 @@ fn main() {
     loop {
         // Initialize handlers for various tasks
         let handlers = initialize_handlers(
-            system_data_rw.clone(),
+            // system_data_rw.clone(),
             ais_rw.clone(),
             git_creds_rw.clone(),
             system_service_rw.clone(),
@@ -81,15 +93,14 @@ fn main() {
 
 /// Initialize handlers for various tasks
 fn initialize_handlers(
-    system_data_rw: Arc<RwLock<SiteInfo>>,
+    // system_data_rw: Arc<RwLock<SiteInfo>>,
     ais_rw: Arc<RwLock<AisInfo>>,
-    git_creds_rw: Arc<RwLock<GitAuth>>,
+    git_creds_rw: Arc<RwLock<GitCredentials>>,
     system_service_rw: Arc<RwLock<Processes>>,
     ssh_data: SshMonitor,
 ) -> Vec<thread::JoinHandle<Result<(), UnifiedError>>> {
     // Spawn a thread to monitor SSH connections
     let monitor_ssh = {
-        let _system_data_rw_clone = Arc::clone(&system_data_rw);
         let ais_rw_clone = Arc::clone(&ais_rw);
         let ssh_data_clone = ssh_data.clone();
         thread::spawn(move || monitor_ssh_connections(ssh_data_clone, ais_rw_clone))
@@ -110,10 +121,12 @@ fn initialize_handlers(
 
     // Spawn a thread to monitor website updates
     let website_monitor = {
-        let system_data_rw_clone = Arc::clone(&system_data_rw);
+        // let system_data_rw_clone = Arc::clone(&system_data_rw);
         let ais_rw_clone = Arc::clone(&ais_rw);
         let git_creds_rw_clone = Arc::clone(&git_creds_rw);
-        thread::spawn(move || website_update_loop(system_data_rw_clone, ais_rw_clone, git_creds_rw_clone))
+        thread::spawn(move || {
+            website_update_loop(ais_rw_clone, git_creds_rw_clone)
+        })
     };
 
     vec![

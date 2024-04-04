@@ -1,19 +1,44 @@
-use shared::{errors::UnifiedError, git_data::GitAuth};
+use std::io::{self, Write};
 
-fn main() -> Result<(), UnifiedError> {
-    // Create a sample GitAuth instance
-    let git_auth = GitAuth {
-        user: "Dj-Codeman".to_string(),
-        repo: "artisan_ws".to_string(),
-        branch: "main".to_string(),
-        token: "***".to_string(),
-    };
+use pretty::{halt, pass};
+use shared::{errors::UnifiedError, git_data::{GitAuth, GitCredentials}};
 
-    // Specify the file path to save the GitAuth data
-    let file_path = "/etc/artisan.cf";
+fn prompt_input(prompt: &str) -> String {
+    print!("{}", prompt);
+    io::stdout().flush().unwrap();
 
-    // Save the GitAuth data to the file
-    git_auth.save(file_path)?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input).unwrap();
+    input.trim().to_string()
+}
 
-    Ok(())
+fn main() {
+    let mut git_creds = GitCredentials::bootstrap_git_credentials().unwrap();
+
+    let num_instances: usize = prompt_input("Enter the number of GitAuth instances to create: ")
+        .parse()
+        .expect("Invalid input");
+
+    for i in 0..num_instances {
+        println!("Enter details for GitAuth instance {}", i + 1);
+
+        let user = prompt_input("User: ");
+        let repo = prompt_input("Repo: ");
+        let branch = prompt_input("Branch: ");
+        let token = prompt_input("Token: ");
+
+        let auth = GitAuth {
+            user,
+            repo,
+            branch,
+            token,
+        };
+
+        git_creds.add_auth(auth);
+    }
+
+    match git_creds.save("/etc/artisan.cf") {
+        Ok(_) => pass("New multiplexed file created"),
+        Err(e) => halt(&format!("Error while creating manifest: {}", &e.to_string())),
+    }
 }

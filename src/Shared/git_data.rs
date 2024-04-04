@@ -1,5 +1,5 @@
-use crate::errors::UnifiedError;
-use crate::{encrypt::Commands, errors::AisError};
+use crate::errors::{AisError, UnifiedError};
+use crate::encrypt::Commands;
 use pretty::warn;
 use recs::errors::{RecsError, RecsErrorType};
 use serde::{Deserialize, Serialize};
@@ -12,7 +12,12 @@ use system::{
     path_present, PathType,
 };
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct GitCredentials {
+    pub auths: Vec<GitAuth>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GitAuth {
     pub user: String,
     pub repo: String,
@@ -20,12 +25,12 @@ pub struct GitAuth {
     pub token: String,
 }
 
-impl GitAuth {
+impl GitCredentials {
     pub fn new() -> Result<Self, UnifiedError> {
         let file_location: &PathType = &PathType::Str("/etc/artisan.cf".into());
         let encrypted_credentials = match path_present(file_location) {
             Ok(true) => {
-                let mut file = File::open(&file_location).map_err(|e| {
+                let mut file = File::open(file_location).map_err(|e| {
                     UnifiedError::from_system_error(SystemError::new_details(
                         SystemErrorType::ErrorOpeningFile,
                         &e.to_string(),
@@ -72,9 +77,9 @@ impl GitAuth {
                 &e.to_string(),
             ))
         })?;
-        let data: GitAuth = serde_json::from_str(&decrypted_string).map_err(|e| {
-            UnifiedError::from_system_error(SystemError::new_details(
-                SystemErrorType::ErrorCreatingFile,
+        let data: GitCredentials = serde_json::from_str(&decrypted_string).map_err(|e| {
+            UnifiedError::from_recs_error(RecsError::new_details(
+                RecsErrorType::JsonReadingError,
                 &e.to_string(),
             ))
         })?;
@@ -83,7 +88,7 @@ impl GitAuth {
     }
 
     pub fn save(&self, file_path: &str) -> Result<(), UnifiedError> {
-        // Serialize GitAuth to JSON
+        // Serialize GitCredentials to JSON
         let json_data = match serde_json::to_string(self) {
             Ok(d) => d,
             Err(e) => {
@@ -125,13 +130,19 @@ impl GitAuth {
         }
     }
 
-    pub fn new_mock(user: &str, repo: &str) -> Self {
-        Self {
-            user: user.to_owned(),
-            repo: repo.to_owned(),
-            branch: "".to_owned(),
-            token: "".to_owned(),
-        }
+    pub fn add_auth(&mut self, auth: GitAuth) {
+        self.auths.push(auth);
     }
 
+    pub fn bootstrap_git_credentials() -> Result<GitCredentials, UnifiedError> {
+        match GitCredentials::new() {
+            Ok(creds) => Ok(creds),
+            Err(_) => {
+                let default_creds = GitCredentials { auths: Vec::new() };
+                default_creds.save("/etc/artisan.cf")?;
+                Ok(default_creds)
+            }
+        }
+    }
+    
 }

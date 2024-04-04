@@ -2,15 +2,12 @@
 //!
 //! This module defines structures and functions related to site information.
 
-use std::{
-    path::PathBuf,
-    sync::{Arc, RwLock, RwLockReadGuard},
-};
+use std::path::PathBuf;
 
-use crate::git_actions::GitAction;
-use shared::{
-    errors::{Caller, UnifiedError},
-    git_data::{GitAuth, GitCredentials},
+use crate::{
+    git_actions::GitAction,
+    errors::UnifiedError,
+    git_data::GitAuth,
 };
 use system::{create_hash, errors::SystemError, path_present, truncate, PathType};
 
@@ -43,7 +40,7 @@ impl SiteInfo {
     ///
     /// A Result containing the new SiteInfo instance if successful, or an error.
     pub fn new(git_creds: &GitAuth) -> Result<Self, UnifiedError> {
-        let mut results: Vec<Self> = Vec::new();
+        let _results: Vec<Self> = Vec::new();
 
         let application_folder = PathType::PathBuf(Self::get_site_folder(&git_creds)?);
 

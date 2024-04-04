@@ -2,9 +2,7 @@
 //!
 //! This module contains the main entry point of the application.
 
-pub mod git_actions;
 pub mod loops;
-pub mod site_info;
 pub mod ssh_monitor;
 
 use std::{
@@ -17,15 +15,14 @@ use pretty::{notice, warn};
 use shared::{
     ais_data::AisInfo,
     encrypt::Dusa,
-    errors::{Caller, UnifiedError, UnifiedErrorResult},
-    git_data::{GitAuth, GitCredentials},
+    errors::{UnifiedError, UnifiedErrorResult},
+    git_data::GitCredentials,
     service::Processes,
 };
 
 use loops::{
-    acquire_read_lock, machine_update_loop, monitor_ssh_connections, service_update_loop, website_update_loop
+    machine_update_loop, monitor_ssh_connections, service_update_loop, website_update_loop
 };
-use site_info::SiteInfo;
 use ssh_monitor::SshMonitor;
 
 /// Entry point of the application

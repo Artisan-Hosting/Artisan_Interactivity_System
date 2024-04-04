@@ -1,10 +1,8 @@
-use crate::{
-    git_actions::GitAction,
-    site_info::{SiteInfo, Updates},
-    ssh_monitor::SshMonitor,
-};
+use crate::ssh_monitor::SshMonitor;
 use pretty::{dump, notice, output, warn};
 use shared::{
+    site_info::{SiteInfo, Updates},
+    git_actions::GitAction,
     ais_data::AisInfo,
     emails::{Email, EmailSecure},
     errors::{AisError, Caller, ErrorInfo, UnifiedError},
@@ -12,7 +10,6 @@ use shared::{
     service::{Memory, Processes, Status},
 };
 use std::{
-    fmt::format,
     sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
     thread,
 };

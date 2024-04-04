@@ -3,7 +3,7 @@ use std::{
     process::{Command, ExitStatus},
 };
 
-use shared::errors::{AisError, GitError, UnifiedError};
+use crate::errors::{AisError, GitError, UnifiedError};
 use system::{path_present, PathType};
 
 /// Function to check if Git is installed.

@@ -103,6 +103,10 @@ name = "generate_manifest"
 path = "src/Tools/manifest/main.rs"
 
 [[bin]]
+name = "clone_repo"
+path = "src/Tools/git_clone/main.rs"
+
+[[bin]]
 name = "ais_welcome"
 path = "src/Welcome/main.rs"
 

@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use pretty::{dump, notice};
 use shared::{
     errors::{ErrorInfo, UnifiedError}, git_actions, git_data::{GitAuth, GitCredentials}, site_info::SiteInfo
@@ -9,10 +7,7 @@ use system::{create_hash, make_dir, truncate, ClonePath, PathType, SystemError};
 // Structs representing GitCredentials and GitAuth omitted for brevity
 
 fn create_directories_for_git_auth(git_auth: &GitAuth) -> Result<(), UnifiedError> {
-    // let site_data: SiteInfo =
 
-    notice(&git_auth.user);
-    notice(&git_auth.repo);
     let site_folder_string: String = format!("{}-{}", git_auth.user, git_auth.repo,);
     let site_folder: String = truncate(&create_hash(site_folder_string), 8).to_owned();
     let ais_progect_path: PathType = PathType::Content(format!("/var/www/current/{}", site_folder));

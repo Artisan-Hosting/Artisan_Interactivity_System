@@ -1,7 +1,7 @@
 use std::io::{self, Write};
 
 use pretty::{halt, pass};
-use shared::{errors::UnifiedError, git_data::{GitAuth, GitCredentials}};
+use shared::git_data::{GitAuth, GitCredentials};
 
 fn prompt_input(prompt: &str) -> String {
     print!("{}", prompt);

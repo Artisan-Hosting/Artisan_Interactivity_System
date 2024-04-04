@@ -3,20 +3,21 @@ use crate::{
     site_info::{SiteInfo, Updates},
     ssh_monitor::SshMonitor,
 };
-use pretty::{output, warn};
+use pretty::{dump, notice, output, warn};
 use shared::{
     ais_data::AisInfo,
     emails::{Email, EmailSecure},
     errors::{AisError, Caller, ErrorInfo, UnifiedError},
-    git_data::{GitAuth, GitCredentials},
+    git_data::GitCredentials,
     service::{Memory, Processes, Status},
 };
 use std::{
+    fmt::format,
     sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
     thread,
 };
 use sysinfo::System;
-use system::ClonePath;
+use system::{path_present, ClonePath, PathType};
 use system_shutdown::reboot;
 use systemstat::Duration;
 
@@ -36,6 +37,43 @@ pub fn website_update_loop(
 
     for git_credential in &git_info.auths {
         let new_site_data = SiteInfo::new(git_credential)?;
+        // Ensure the path thats in the manifest exists before we try to update
+
+        match path_present(&new_site_data.application_folder) {
+            Ok(b) => match b {
+                true => (), // Beautiful we are already initialized
+                false => {
+                    // Clone the git repo properly
+                    let repo_url: String = format!(
+                        "https://github.com/{}/{}.git",
+                        git_credential.user, git_credential.repo
+                    );
+                    let repo_path: PathType = new_site_data.application_folder.clone_path();
+
+                    match (GitAction::Clone {
+                        repo_url,
+                        destination: repo_path,
+                    })
+                    .execute()
+                    {
+                        Ok(d) => match d {
+                            true => notice("New repo added"), // We've cloned the repo
+                            false => dump("Error while cloning repo"), // Since I have no error we'll let this be caught later
+                        },
+                        Err(e) => return Err(e),
+                    }
+                }
+            },
+            Err(e) => {
+                return Err(UnifiedError::SystemError(
+                    ErrorInfo::with_severity(
+                        Caller::Function(true, Some(String::from("Website update loop"))),
+                        shared::errors::Severity::Warning,
+                    ),
+                    e,
+                ))
+            }
+        }
 
         // Perform site updates based on new_site_data
         match new_site_data.application_status {
@@ -45,7 +83,8 @@ pub fn website_update_loop(
             }
             Updates::OutOfDate => {
                 // Handle out-of-date scenario
-                let site_update_action = GitAction::Pull(new_site_data.application_folder.clone_path());
+                let site_update_action =
+                    GitAction::Pull(new_site_data.application_folder.clone_path());
                 match site_update_action.execute() {
                     Ok(ok) => {
                         if ok {

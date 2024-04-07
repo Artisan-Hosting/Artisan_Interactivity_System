@@ -11,22 +11,60 @@ use std::{
     time::Duration,
 };
 
-use pretty::{notice, warn};
+use pretty::{halt, notice, warn};
 use shared::{
     ais_data::AisInfo,
-    encrypt::Dusa,
-    errors::{UnifiedError, UnifiedErrorResult},
+    ais_security::{check_cf, check_manifest},
+    emails::{Email, EmailSecure},
+    errors::{Severity, UnifiedError, UnifiedErrorResult},
     git_data::GitCredentials,
     service::Processes,
 };
 
 use loops::{
-    machine_update_loop, monitor_ssh_connections, service_update_loop, website_update_loop
+    machine_update_loop, monitor_ssh_connections, service_update_loop, website_update_loop,
 };
 use ssh_monitor::SshMonitor;
 
 /// Entry point of the application
 fn main() {
+    // Ensuring we have credentials to work with
+    if !UnifiedErrorResult::new(check_cf()).unwrap() {
+        std::process::exit(0);
+    };
+
+    // Ensuring we have a manifest file thats valid
+    if UnifiedErrorResult::new(check_manifest(AisInfo::new().unwrap())).is_err() {
+        // ? The PreExec for the service requires that the manifest be created before the
+        // ? can run. If we start and the manifest can't be found phone home and haltt
+        let message: Email = Email {
+            subject: "A system has been Initialized incorrectly".to_owned(),
+            body: format!(
+                "An error occoured while initializing the system at the following ip: {}",
+                AisInfo::fetch_machine_ip().unwrap_or("Error pulling Ip".to_owned())
+            ),
+        };
+        let secure_message: EmailSecure =
+            UnifiedErrorResult::new(EmailSecure::new(message)).unwrap();
+        match secure_message.send() {
+            Ok(_) => (),
+            Err(e) => match e {
+                UnifiedError::AisError(ei, ek) => {
+                    if ei.severity == Severity::NotFatal {
+                        warn(&format!("Non-fatal error: {}", ek));
+                    }
+                }
+                _ => halt(&format!("{}", e)),
+            },
+        }
+        thread::sleep(Duration::from_secs(300000));
+        std::process::exit(0);
+    };
+
+    // Initialize the AIS information
+    let ais_data: UnifiedErrorResult<AisInfo> = UnifiedErrorResult::new(AisInfo::new());
+    let ais_rw: Arc<RwLock<AisInfo>> = Arc::new(RwLock::new(ais_data.unwrap()));
+
     // Initializing GitHub information
     let git_creds_data: GitCredentials = GitCredentials::new().unwrap();
     warn(&format!("{:?}", &git_creds_data));
@@ -37,15 +75,6 @@ fn main() {
         UnifiedErrorResult::new(Processes::new());
     let system_service_rw: Arc<RwLock<Processes>> =
         Arc::new(RwLock::new(system_services_data.unwrap()));
-
-    // Initializing Dusa connection
-    let dusa_data: UnifiedErrorResult<Dusa> =
-        UnifiedErrorResult::new(Dusa::initialize(Arc::clone(&system_service_rw)));
-    let _dusa_data_rw: Arc<RwLock<Dusa>> = Arc::new(RwLock::new(dusa_data.unwrap()));
-
-    // Initialize the AIS information
-    let ais_data: UnifiedErrorResult<AisInfo> = UnifiedErrorResult::new(AisInfo::new());
-    let ais_rw: Arc<RwLock<AisInfo>> = Arc::new(RwLock::new(ais_data.unwrap()));
 
     // Initializing the SSH monitor
     let ssh_data: SshMonitor = SshMonitor::new();
@@ -114,9 +143,7 @@ fn initialize_handlers(
     let website_monitor = {
         let ais_rw_clone = Arc::clone(&ais_rw);
         let git_creds_rw_clone = Arc::clone(&git_creds_rw);
-        thread::spawn(move || {
-            website_update_loop(ais_rw_clone, git_creds_rw_clone)
-        })
+        thread::spawn(move || website_update_loop(ais_rw_clone, git_creds_rw_clone))
     };
 
     vec![

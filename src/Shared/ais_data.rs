@@ -68,9 +68,10 @@ impl AisInfo {
     pub fn new() -> Result<Self, UnifiedError> {
         let manifest_data = Self::fetch_manifest()?;
 
-        let ais_version = AisVersion {
-            version_number: 1.31,
-            version_code: AisCode::ProductionCandidate,
+
+        let ais_version: AisVersion = match serde_json::from_value(manifest_data.get("system_version").unwrap().clone()) {
+            Ok(d) => d,
+            Err(_) => Self::current_version(),
         };
 
         Ok(AisInfo {
@@ -83,8 +84,12 @@ impl AisInfo {
             machine_id: manifest_data
                 .get("machine_id")
                 .and_then(|v| v.as_str().map(|s| s.to_string())),
-            machine_mac: Self::fetch_machine_mac(),
-            machine_ip: Self::fetch_machine_ip(),
+            machine_mac: manifest_data
+                .get("machine_mac")
+                .and_then(|v| v.as_str().map(|s| s.to_string())),
+            machine_ip: manifest_data
+                .get("machine_ip")
+                .and_then(|v| v.as_str().map(|s| s.to_string())),
             ssh_events: 0,
             system_version: ais_version,
         })
@@ -106,6 +111,14 @@ impl AisInfo {
         }
     }
 
+    pub fn current_version() -> AisVersion {
+        let new_ais_version = AisVersion {
+            version_number: 1.31,
+            version_code: AisCode::Production,
+        };
+        return new_ais_version
+    }
+
     /// Fetches the manifest data.
     fn fetch_manifest() -> Result<serde_json::Value, UnifiedError> {
         let manifest_path = Self::fetch_manifest_path();
@@ -118,9 +131,8 @@ impl AisInfo {
                 file.read_to_end(&mut buffer)
                     .map_err(|e| UnifiedError::from_ais_error(AisError::new(&e.to_string())))?;
 
-                serde_json::from_slice(&buffer).map_err(|e| {
-                    UnifiedError::from_ais_error(AisError::new(&e.to_string()))
-                })
+                serde_json::from_slice(&buffer)
+                    .map_err(|e| UnifiedError::from_ais_error(AisError::new(&e.to_string())))
             }
             _ => {
                 let generic_ais = AisInfo {
@@ -136,9 +148,8 @@ impl AisInfo {
                     },
                 };
 
-                serde_json::to_value(&generic_ais).map_err(|e| {
-                    UnifiedError::from_ais_error(AisError::new(&e.to_string()))
-                })
+                serde_json::to_value(&generic_ais)
+                    .map_err(|e| UnifiedError::from_ais_error(AisError::new(&e.to_string())))
             }
         }
     }
@@ -150,9 +161,8 @@ impl AisInfo {
 
     /// Creates the manifest file.
     pub fn create_manifest(&self) -> Result<(), UnifiedError> {
-        let json_data = serde_json::to_string(self).map_err(|e| {
-            UnifiedError::from_ais_error(AisError::new(&e.to_string()))
-        })?;
+        let json_data = serde_json::to_string(self)
+            .map_err(|e| UnifiedError::from_ais_error(AisError::new(&e.to_string())))?;
 
         let mut file = File::create(Self::fetch_manifest_path())
             .map_err(|e| UnifiedError::from_ais_error(AisError::new(&e.to_string())))?;
@@ -168,7 +178,7 @@ impl AisInfo {
     }
 
     /// Fetches the machine's IP address.
-    fn fetch_machine_ip() -> Option<String> {
+    pub fn fetch_machine_ip() -> Option<String> {
         if let Ok(ifaces) = get_if_addrs() {
             for iface in ifaces {
                 if iface.is_loopback() || !iface.ip().is_ipv4() {
@@ -197,7 +207,7 @@ mod tests {
         assert!(ais_info.machine_ip.is_some());
         assert_eq!(ais_info.ssh_events, 0);
         assert_eq!(ais_info.system_version.version_number, 1.31);
-        assert_eq!(ais_info.system_version.version_code, AisCode::ProductionCandidate);
+        assert_eq!(ais_info.system_version.version_code, AisCode::Production);
     }
 
     #[test]
@@ -229,7 +239,6 @@ mod tests {
         assert_eq!(path, PathType::Str("/etc/artisan.manifest".into()));
     }
 
-
     #[test]
     fn test_fetch_machine_mac() {
         // Test fetching the machine's MAC address
@@ -247,5 +256,4 @@ mod tests {
         // Assert that IP address is not None
         assert!(ip.is_some());
     }
-
 }

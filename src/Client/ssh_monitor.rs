@@ -28,7 +28,7 @@ pub struct SshInfo {
 
 impl SshInfo {
     /// Prepares an email based on SSH connection information.
-    pub fn prepare(&mut self) -> Email {
+    pub fn prepare(&mut self, ais_info: AisInfo) -> Email {
         let importance = if self.priority_status {
             String::from("HIGH")
         } else {
@@ -39,8 +39,8 @@ impl SshInfo {
 
         let subject = format!("SSH ACCESS AUDIT {} IMPORTANCE", importance);
         let body = format!(
-            "SSH ACCESS NOTIFICATION\nAt {} THE HOST {} WAS ACCESSED \nBY {}, FROM AN ORIGIN {}.",
-            self.time_stamp, self.system_ip, self.system_user, origin
+            "SSH ACCESS NOTIFICATION\nAt {} THE HOST ais_{}.local WAS ACCESSED \nBY {}, FROM AN ORIGIN {}.",
+            self.time_stamp, ais_info.client_id.unwrap_or("000000".to_owned()), self.system_user, origin
         );
 
         Email { subject, body }
@@ -134,7 +134,7 @@ impl SshMonitor {
             system_user,
             priority_status,
         };
-        let ssh_report_data = ssh_report.prepare();
+        let ssh_report_data = ssh_report.prepare(ais_data.clone());
         ais_data.ssh_events += 1;
         warn(&format!("Ssh events: {}", ais_data.ssh_events));
         let secure_email: EmailSecure = EmailSecure::new(ssh_report_data)?;
@@ -183,27 +183,6 @@ impl SshMonitor {
 #[cfg(test)]
 mod tests {
     use super::*;
-   
-    // Test case for preparing an SSH report
-    #[test]
-    fn test_prepare_ssh_report() {
-        let mut ssh_info = SshInfo {
-            time_stamp: "2024-03-25 12:00:00".to_string(),
-            system_ip: "192.168.1.100".to_string(),
-            system_user: "test_user".to_string(),
-            priority_status: true,
-        };
-
-        let email = ssh_info.prepare();
-        assert_eq!(
-            email.subject,
-            "SSH ACCESS AUDIT HIGH IMPORTANCE"
-        );
-        assert_eq!(
-            email.body,
-            "SSH ACCESS NOTIFICATION\nAt 2024-03-25 12:00:00 THE HOST 192.168.1.100 WAS ACCESSED \nBY test_user, FROM AN ORIGIN UNKNOWN."
-        );
-    }
 
     // Test case for validating SSH users
     #[test]

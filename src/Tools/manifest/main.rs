@@ -23,6 +23,7 @@ fn main() -> Result<(), UnifiedError> {
         )
         .to_owned(),
     );
+    ais_info.system_version = AisInfo::current_version();
     // Generate the manifest file
     ais_info.create_manifest()?;
 

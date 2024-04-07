@@ -6,7 +6,7 @@ use std::{fmt, io, process::ExitStatus, str::Utf8Error};
 use system::errors::SystemError;
 
 /// Enum representing the severity level of an error.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub enum Severity {
     /// Indicates a fatal error, causing the program to terminate.
     Fatal,
@@ -343,6 +343,12 @@ pub enum AisError {
     EncryptionNotReady(Option<String>),
     /// When running the first run system.
     FirstRun(Option<String>),
+    /// This Error should only be thrown as optional, When the system is initialized and the manifest is out of date or invalid
+    InvalidManifest(Option<String>),
+    /// The artisan.cf file is corrupted or missing
+    NoCredentials(Option<String>),
+    /// When we can't connect to the messagging server
+    EtNoHome(Option<String>),
 }
 
 impl AisError {
@@ -372,7 +378,10 @@ impl AisError {
             | AisError::UpdateError(desc)
             | AisError::UpToDate(desc)
             | AisError::SystemError(desc)
+            | AisError::InvalidManifest(desc)
+            | AisError::NoCredentials(desc)
             | AisError::EncryptionNotReady(desc)
+            | AisError::EtNoHome(desc)
             | AisError::FirstRun(desc) => {
                 desc.as_deref().unwrap_or("An unspecified error occurred")
             }

@@ -1,5 +1,5 @@
 use crate::encrypt::Commands;
-use crate::errors::{AisError, UnifiedError};
+use crate::errors::{AisError, Caller, ErrorInfo, Severity, UnifiedError};
 use serde::{Deserialize, Serialize};
 use std::{fmt, io::Write, net::TcpStream};
 
@@ -73,7 +73,16 @@ impl EmailSecure {
     pub fn send(&self) -> Result<(), UnifiedError> {
         let mut stream = match TcpStream::connect("10.1.0.11:1827") {
             Ok(d) => d,
-            Err(e) => return Err(UnifiedError::from_ais_error(AisError::new(&e.to_string()))),
+            Err(_) => {
+                return Err(UnifiedError::AisError(
+                    ErrorInfo::with_severity(
+                        Caller::Impl(true, Some("secure_message.send()".to_owned())),
+                        Severity::NotFatal,
+                    ),
+                    AisError::EtNoHome(Some("Unable to contact messaging server".to_owned())),
+                ))
+            }
+            // Err(e) => return Err(UnifiedError::from_ais_error(AisError::new(&e.to_string()))),
         };
         match stream.write_all(self.data.as_bytes()) {
             Ok(_) => Ok(()),
@@ -118,7 +127,9 @@ mod tests {
 
         // Create a dummy encrypted email
         let encrypted_data = "dummy_encrypted_data".to_string();
-        let email_secure = EmailSecure { data: encrypted_data };
+        let email_secure = EmailSecure {
+            data: encrypted_data,
+        };
 
         // Attempt to send the encrypted email
         let result = email_secure.send();

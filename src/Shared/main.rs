@@ -21,3 +21,6 @@ pub mod site_info;
 
 /// The `git_data` module holds data structures and utilities specific to manipulating git repos.
 pub mod git_actions;
+
+/// The `ais_security` module holds functions to run to verity that the ais is running in a controlled enviornment
+pub mod ais_security;

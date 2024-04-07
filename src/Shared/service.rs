@@ -12,6 +12,8 @@ pub enum Services {
     MONITOR,
     FIREWALL,
     LOCKER,
+    DATABASE,
+    DOCKER,
 }
 
 /// Enum representing the status of a service.
@@ -44,6 +46,7 @@ pub struct ProcessInfo {
     pub memory: Memory,
     pub children: SubProcesses,
     pub timestamp: String,
+    pub optional: bool,
 }
 
 /// Enum representing different types of processes.
@@ -118,6 +121,7 @@ impl Services {
             children,
             timestamp: timestamp(),
             refered: self.clone(),
+            optional: false, // TODO implement matching
         })
     }
 
@@ -173,6 +177,7 @@ impl ProcessInfo {
             children,
             timestamp: timestamp(),
             refered: service,
+            optional: false,
         })
     }
 }
@@ -188,6 +193,8 @@ impl fmt::Display for Services {
             Services::MONITOR => "netdata.service",
             Services::FIREWALL => "ufw.service",
             Services::LOCKER => "dusad.service",
+            Services::DATABASE => "mysql.service",
+            Services::DOCKER => "docker.service",
         };
         write!(f, "{}", name)
     }

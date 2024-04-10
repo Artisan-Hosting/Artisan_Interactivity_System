@@ -1,13 +1,13 @@
 use crate::ssh_monitor::SshMonitor;
 use pretty::{dump, notice, output, warn};
 use shared::{
-    site_info::{SiteInfo, Updates},
-    git_actions::GitAction,
     ais_data::AisInfo,
     emails::{Email, EmailSecure},
     errors::{AisError, Caller, ErrorInfo, UnifiedError},
+    git_actions::GitAction,
     git_data::GitCredentials,
     service::{Memory, Processes, Status},
+    site_info::{SiteInfo, Updates},
 };
 use std::{
     sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard},
@@ -54,7 +54,7 @@ pub fn website_update_loop(
                     .execute()
                     {
                         Ok(d) => match d {
-                            true => notice("New repo added"), // We've cloned the repo
+                            true => notice("New repo added"),          // We've cloned the repo
                             false => dump("Error while cloning repo"), // Since I have no error we'll let this be caught later
                         },
                         Err(e) => return Err(e),
@@ -75,13 +75,17 @@ pub fn website_update_loop(
         // Perform site updates based on new_site_data
         match new_site_data.application_status {
             Updates::UpToDate => {
-                // Handle up-to-date scenario
-                // You may perform some actions if the application is already up-to-date
+                GitAction::Switch {
+                    branch: git_credential.branch.clone(),
+                    destination: new_site_data.application_folder.clone_path(),
+                }.execute()?;
             }
             Updates::OutOfDate => {
                 // Handle out-of-date scenario
-                let site_update_action =
-                    GitAction::Pull(new_site_data.application_folder.clone_path());
+                let site_update_action = GitAction::Pull {
+                    target_branch: git_credential.branch.clone(),
+                    destination: new_site_data.application_folder.clone_path(),
+                };
                 match site_update_action.execute() {
                     Ok(ok) => {
                         if ok {

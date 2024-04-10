@@ -222,7 +222,7 @@ mod tests {
             ssh_events: 5,
             system_version: AisVersion {
                 version_number: 1.31,
-                version_code: AisCode::ProductionCandidate,
+                version_code: AisCode::Beta,
             },
         };
 

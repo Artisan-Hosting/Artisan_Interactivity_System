@@ -219,7 +219,7 @@ impl From<RecsError> for UnifiedError {
 /// including the current timestamp and default severity set to `Fatal`.
 impl From<GitError> for UnifiedError {
     fn from(error: GitError) -> UnifiedError {
-        let error_info = ErrorInfo::new(Caller::Library(false, None));
+        let error_info = ErrorInfo::new(Caller::Library(true, None));
         UnifiedError::GitError(error_info, error)
     }
 }
@@ -230,7 +230,7 @@ impl From<GitError> for UnifiedError {
 /// including the current timestamp and default severity set to `Fatal`.
 impl From<AisError> for UnifiedError {
     fn from(error: AisError) -> UnifiedError {
-        let error_info = ErrorInfo::new(Caller::Library(false, None));
+        let error_info = ErrorInfo::new(Caller::Library(true, None));
         UnifiedError::AisError(error_info, error)
     }
 }

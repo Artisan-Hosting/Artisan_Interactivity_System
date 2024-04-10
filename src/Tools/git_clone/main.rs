@@ -85,7 +85,7 @@ fn main() {
 
     // Create directories for each GitAuth entry
     match create_directories_for_git_credentials(&credentials) {
-        Ok(_) => println!("Directories created successfully"),
-        Err(err) => eprintln!("Error creating directories: {:?}", err),
+        Ok(_) => notice("Directories created successfully"),
+        Err(err) => dump(&format!("Error creating directories: {:?}", err)),
     }
 }

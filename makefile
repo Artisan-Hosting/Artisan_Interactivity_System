@@ -5,7 +5,7 @@ DEST_DIR = /usr/local/bin
 .PHONY: all clean test build install uninstall post-clean
 
 # Default target
-all: clean stop test build install post-clean
+all: stop test build install
 
 # Clean target
 clean:

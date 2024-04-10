@@ -67,7 +67,6 @@ fn main() {
 
     // Initializing GitHub information
     let git_creds_data: GitCredentials = GitCredentials::new().unwrap();
-    warn(&format!("{:?}", &git_creds_data));
     let git_creds_rw: Arc<RwLock<GitCredentials>> = Arc::new(RwLock::new(git_creds_data));
 
     // Getting system service information

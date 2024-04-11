@@ -80,24 +80,6 @@ fn main() {
                 halt(&format!("Failed to delete SSH keys: {}", err));
             }
 
-            // Delete known_hosts file
-            if let Err(err) = Command::new("rm")
-                .arg("-f")
-                .arg("/root/.ssh/known_hosts")
-                .status()
-            {
-                halt(&format!("Failed to delete roots, known_hosts file: {}", err));
-            }
-
-            // Delete known_hosts file
-            if let Err(err) = Command::new("rm")
-                .arg("-f")
-                .arg("/root/.ssh/known_hosts")
-                .status()
-            {
-                halt(&format!("Failed to delete roots, known_hosts file: {}", err));
-            }
-
             // start the sshd service
             match ssh_unit.start() {
                 Ok(_) => (),

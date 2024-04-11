@@ -22,7 +22,7 @@ fn create_directories_for_git_auth(git_auth: &GitAuth) -> Result<(), UnifiedErro
                         Ok(b) => match b {
                             true => {
                                 // Once the directory is created we clone the data into it
-                                let action = git_actions::GitAction::Clone { repo_url: format!("https://github.com/{}/{}.git", git_auth.user, git_auth.repo), destination: ais_progect_path };
+                                let action = git_actions::GitAction::Clone { repo_url: format!("git@github.com:{}/{}.git", git_auth.user, git_auth.repo), destination: ais_progect_path };
                                 match action.execute() {
                                     Ok(_) => return Ok(()),
                                     Err(e) => return Err(e),

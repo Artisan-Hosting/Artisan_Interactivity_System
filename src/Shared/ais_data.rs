@@ -33,7 +33,7 @@ pub struct AisInfo {
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct AisVersion {
     /// Version number.
-    pub version_number: f64,
+    pub version_number: f32,
     /// Version code.
     pub version_code: AisCode,
 }

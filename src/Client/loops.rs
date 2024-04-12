@@ -14,7 +14,7 @@ use std::{
     thread,
 };
 use sysinfo::System;
-use system::{chown_recursive, path_present, ClonePath, PathType};
+use system::{/*chown_recursive,*/ path_present, ClonePath, PathType};
 use system_shutdown::reboot;
 use systemstat::Duration;
 
@@ -80,7 +80,7 @@ pub fn website_update_loop(
                     destination: new_site_data.application_folder.clone_path(),
                 }
                 .execute()?;
-                chown_recursive(new_site_data.application_folder, Some(33), Some(33))?;
+                // chown_recursive(new_site_data.application_folder, Some(33), Some(33))?;
             }
             Updates::OutOfDate => {
                 // Handle out-of-date scenario
@@ -112,7 +112,7 @@ pub fn website_update_loop(
                     }
                     Err(e) => return Err(e),
                 }
-                chown_recursive(new_site_data.application_folder, Some(33), Some(33))?;
+                // chown_recursive(new_site_data.application_folder, Some(33), Some(33))?;
             }
         }
     }

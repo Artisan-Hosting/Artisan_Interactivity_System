@@ -3,7 +3,7 @@ use std::{
     process::{Command, ExitStatus},
 };
 
-use crate::errors::{AisError, GitError, UnifiedError};
+use crate::errors::{AisError, Caller, ErrorInfo, GitError, UnifiedError};
 use system::{path_present, PathType};
 
 /// Function to check if Git is installed.
@@ -47,8 +47,8 @@ pub enum GitAction {
         message: String,
     },
     CheckRemoteAhead(PathType),
-    Switch{
-        branch:String,
+    Switch {
+        branch: String,
         destination: PathType,
     },
 }
@@ -91,9 +91,10 @@ impl GitAction {
                 path_present(directory)?;
                 check_remote_ahead(directory)
             }
-            GitAction::Switch{branch, destination} => {
-                execute_git_command(&["-C", destination.to_str().unwrap(), "switch", branch])
-            },
+            GitAction::Switch {
+                branch,
+                destination,
+            } => execute_git_command(&["-C", destination.to_str().unwrap(), "switch", branch]),
         }
     }
 }
@@ -112,9 +113,14 @@ fn execute_git_command(args: &[&str]) -> Result<bool, UnifiedError> {
     if output.status.success() {
         Ok(true)
     } else {
-        Err(UnifiedError::from_git_error(GitError::CommandFailed(
-            output.status,
-        )))
+        Err(UnifiedError::AisError(
+            ErrorInfo::new(Caller::Function(
+                true,
+                Some("execute_git_command".to_owned()),
+            )),
+            AisError::SystemError(Some(String::from_utf8(output.stderr).unwrap())),
+            // AisError::SystemError(output.stderr),
+        ))
     }
 }
 
@@ -123,9 +129,13 @@ fn check_remote_ahead(directory: &PathType) -> Result<bool, UnifiedError> {
     let fetch_output: bool = execute_git_command(&["-C", directory.to_str().unwrap(), "fetch"])?;
 
     if !fetch_output {
-        return Err(UnifiedError::from_git_error(GitError::CommandFailed(
-            ExitStatus::from_raw(1),
-        )));
+        return Err(UnifiedError::GitError(
+            ErrorInfo::new(Caller::Function(
+                true,
+                Some("checl_remote_ahead".to_owned()),
+            )),
+            GitError::CommandFailed(ExitStatus::from_raw(1)),
+        ));
     }
 
     let local_hash: String =
@@ -141,9 +151,13 @@ fn execute_git_hash_command(args: &[&str]) -> Result<String, UnifiedError> {
     let output: std::process::Output = match Command::new("git").args(args).output() {
         Ok(output) => output,
         Err(io_err) => {
-            return Err(UnifiedError::from_ais_error(AisError::new(
-                &io_err.to_string(),
-            )))
+            return Err(UnifiedError::AisError(
+                ErrorInfo::new(Caller::Function(
+                    true,
+                    Some("execute_git_command_with_hash".to_owned()),
+                )),
+                AisError::GitCommandFailed(Some(io_err.to_string())),
+            ))
         }
     };
 

@@ -11,6 +11,10 @@ use std::{
     time::Duration,
 };
 
+use nix::{
+    libc::{setgid, setuid},
+    unistd::{Gid, Uid},
+};
 use pretty::{halt, notice, warn};
 use shared::{
     ais_data::AisInfo,
@@ -61,6 +65,10 @@ fn main() {
         std::process::exit(0);
     };
 
+    // Defining the user ids
+    let www_data_uid: Uid = Uid::from_raw(0);
+    let www_data_gid: Gid = Gid::from_raw(0);
+
     // Initialize the AIS information
     let ais_data: UnifiedErrorResult<AisInfo> = UnifiedErrorResult::new(AisInfo::new());
     let ais_rw: Arc<RwLock<AisInfo>> = Arc::new(RwLock::new(ais_data.unwrap()));
@@ -93,6 +101,8 @@ fn main() {
             git_creds_rw.clone(),
             system_service_rw.clone(),
             ssh_data.clone(),
+            www_data_uid,
+            www_data_gid,
         );
 
         // Join all threads and handle errors
@@ -117,6 +127,8 @@ fn initialize_handlers(
     git_creds_rw: Arc<RwLock<GitCredentials>>,
     system_service_rw: Arc<RwLock<Processes>>,
     ssh_data: SshMonitor,
+    www_data_uid: Uid,
+    www_data_gid: Gid,
 ) -> Vec<thread::JoinHandle<Result<(), UnifiedError>>> {
     // Spawn a thread to monitor SSH connections
     let monitor_ssh = {
@@ -142,7 +154,14 @@ fn initialize_handlers(
     let website_monitor = {
         let ais_rw_clone = Arc::clone(&ais_rw);
         let git_creds_rw_clone = Arc::clone(&git_creds_rw);
-        thread::spawn(move || website_update_loop(ais_rw_clone, git_creds_rw_clone))
+        thread::spawn(move || {
+            // Dropping priv for the website update loop
+            unsafe {
+                setuid(www_data_uid.into());
+                setgid(www_data_gid.into());
+            }
+            website_update_loop(ais_rw_clone, git_creds_rw_clone)
+        })
     };
 
     vec![

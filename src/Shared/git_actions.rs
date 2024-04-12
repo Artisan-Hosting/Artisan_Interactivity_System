@@ -51,6 +51,8 @@ pub enum GitAction {
         branch: String,
         destination: PathType,
     },
+    // git config --global --add safe.directory /var/www/current/path
+    SetSafe(PathType),
 }
 
 impl GitAction {
@@ -95,6 +97,10 @@ impl GitAction {
                 branch,
                 destination,
             } => execute_git_command(&["-C", destination.to_str().unwrap(), "switch", branch]),
+            GitAction::SetSafe(directory) => execute_git_command(&[
+                "config --global --add safe.directory",
+                directory.to_str().unwrap(),
+            ]),
         }
     }
 }

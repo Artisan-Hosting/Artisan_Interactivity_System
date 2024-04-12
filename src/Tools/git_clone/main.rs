@@ -33,6 +33,7 @@ fn create_directories_for_git_auth(git_auth: &GitAuth) -> Result<(), UnifiedErro
                                 };
                                 match action.execute() {
                                     Ok(_) => {
+                                        git_actions::GitAction::SetSafe(ais_progect_path.clone_path()).execute()?;
                                         chown_recursive(ais_progect_path.clone(), Some(33), Some(33))?
                                     },
                                     Err(e) => { 

@@ -31,6 +31,8 @@ install:
 	@cp -v target/release/ais_clone /usr/local/bin/ais_clone
 	@cp -v target/release/ais_welcome /usr/local/bin/ais_welcome
 	@cp -v target/release/ais_first_run /usr/local/bin/ais_first_run
+	@cp -v target/release/ais_python /usr/local/bin/ais_python
+	@ln -sfv /usr/local/bin/ais_python /bin/python
 	@systemctl start ais
 # Restart the service
 

@@ -19,7 +19,7 @@ fn main() {
     let lsb_failsafe: LsbRelease = LsbRelease {
         id: String::from("failsafe"),
         desc: String::from("System in a damanged state"),
-        version: String::from("0.00"),
+        version: String::from("4.20"),
         code_name: String::from("Wacky Whitfield"),
     };
 

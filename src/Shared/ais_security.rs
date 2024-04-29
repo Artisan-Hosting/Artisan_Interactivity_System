@@ -19,10 +19,11 @@ pub fn check_cf() -> Result<bool, UnifiedError> {
             // ? We look for a system error saying we could not find the artiisan.cf file.
             // ? This means that the system has been initialized but no clients have been
             // ? Registered. Theres is not point in running loops or monitoring when the
-            // ? Server is not in a usable state
+            // ? Server is not in a usable state. We will also enter this state if dusad
+            // ? is not running or we cannot communicate with it.
             UnifiedError::SystemError(k, d) => match d.kind {
                 system::errors::SystemErrorType::ErrorOpeningFile => {
-                    notice("Awating registration");
+                    notice("Awating registration! Is dusad running?");
                     thread::sleep(Duration::from_secs_f32(30.0));
                     return Ok(false); // false means that we should exit because the file was not found
                 }

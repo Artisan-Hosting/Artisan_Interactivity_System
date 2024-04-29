@@ -105,7 +105,7 @@ impl Commands {
             Commands::DecryptFile(_, _) => Ok(None),
             Commands::DecryptText(cipher_data) => {
                 let mut command_data: Vec<String> = vec![];
-                command_data.push(String::from("decrypt"));
+                command_data.push("0x011".to_owned());
                 command_data.push(cipher_data.to_owned());
 
                 let message: String = Self::create_message(command_data);
@@ -115,7 +115,7 @@ impl Commands {
             }
             Commands::EncryptText(data) => {
                 let mut command_data: Vec<String> = vec![];
-                command_data.push(String::from("encrypt"));
+                command_data.push("0x001".to_owned());
                 command_data.push(data.to_owned());
 
                 let message: String = Self::create_message(command_data);

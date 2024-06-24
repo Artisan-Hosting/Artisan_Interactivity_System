@@ -35,7 +35,7 @@ hex = "0.4.3"
 hostname = {version = "^0.4", features = ["set"]}
 
 # Get network interface addresses
-if-addrs = "0.12.0"
+if-addrs = "0.13.0"
 
 # HTTP client library
 isahc = "1.7.2"
